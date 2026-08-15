@@ -1,3 +1,4 @@
+import json
 import os
 
 import ansible_runner
@@ -7,6 +8,7 @@ from uuid import uuid4
 
 DATA = {}
 PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
+PRIVATE_DIR = os.path.abspath('./private/') # TODO
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16) # TODO
@@ -27,7 +29,7 @@ def job_new():
             'hosts': {
                 request.json['host']: {
                     'ansible_connection': 'http',
-                    'ansible_http_runner': id,
+                    'ansible_http_runner': f'{PRIVATE_DIR}/artifacts/{id}',
                 },
             },
         },
@@ -40,28 +42,48 @@ def job_new():
             '/usr/share/ansible/plugins/connection',
         ])
     }
-    _, r = ansible_runner.run_async(private_data_dir='private',
+    os.makedirs(f'{PRIVATE_DIR}/artifacts/{id}/')
+    os.mkfifo(f'{PRIVATE_DIR}/artifacts/{id}/sendbuf')
+    os.mkfifo(f'{PRIVATE_DIR}/artifacts/{id}/recvbuf')
+    _, r = ansible_runner.run_async(private_data_dir=PRIVATE_DIR,
                                     limit=request.json['host'],
                                     inventory=inv,
                                     envvars=env,
                                     playbook=PLAYBOOK,
                                     ident=id,
-                                    verbosity=4
+                                    verbosity=3
                                     )
-    DATA[id] = r
+    sendbuf = open(f'{PRIVATE_DIR}/artifacts/{id}/sendbuf', 'r')
+    recvbuf = open(f'{PRIVATE_DIR}/artifacts/{id}/recvbuf', 'w')
+    DATA[id] = {
+        'runner': r,
+        'sendbuf': sendbuf,
+        'recvbuf': recvbuf,
+    }
     session['runner'] = id
 
     return make_response('', 201, {'Location': f'/runners/{id}'})
 
 
-@app.route('/runners/<id>')
+@app.put('/runners/<id>')
 def job_status(id):
     if id != session.get('runner'):
         abort(401)
 
-    return {
-        'status': DATA[id].status,
-    }
+    data = request.json
+    if data:
+        DATA[id]['recvbuf'].write(json.dumps(data) + '\n')
+        DATA[id]['recvbuf'].flush()
+
+    sendline = DATA[id]['sendbuf'].readline()
+    if sendline:
+        res = json.loads(sendline)
+    else:
+        res = {}
+
+    res['status'] = DATA[id]['runner'].status
+
+    return res
 
 
 if __name__ == '__main__':
