@@ -14,9 +14,9 @@ assert res.status_code == 201
 job_url = f'{API}{res.headers['Location']}'
 
 while True:
-    status = requests.get(job_url, cookies=res.cookies).content
-    print(f'Status: {status.decode()}')
+    data = requests.get(job_url, cookies=res.cookies).json()
+    print(f'Status: {data['status']}')
 
-    if status not in [b'started', b'running']:
+    if data['status'] not in ['started', 'running']:
         break
     time.sleep(1)

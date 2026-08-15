@@ -9,7 +9,7 @@ DATA = {}
 PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
 
 app = Flask(__name__)
-app.secret_key = b'_5#y2L"F4Q8z\n\xec]/' # TODO
+app.secret_key = os.urandom(16) # TODO
 
 
 @app.get('/install')
@@ -32,10 +32,20 @@ def job_new():
             },
         },
     }
+    env = {
+        'ANSIBLE_CONNECTION_PLUGINS': ':'.join([
+            os.path.abspath('./connection_plugins/'), # TODO
+            # Default paths:
+            'demo/plugins/connection', # TODO
+            '/usr/share/ansible/plugins/connection',
+        ])
+    }
     _, r = ansible_runner.run_async(private_data_dir='private',
                                     limit=request.json['host'],
                                     inventory=inv,
+                                    envvars=env,
                                     playbook=PLAYBOOK,
+                                    ident=id,
                                     verbosity=4
                                     )
     DATA[id] = r
@@ -49,7 +59,9 @@ def job_status(id):
     if id != session.get('runner'):
         abort(401)
 
-    return DATA[id].status
+    return {
+        'status': DATA[id].status,
+    }
 
 
 if __name__ == '__main__':
