@@ -27,6 +27,7 @@ class Runner:
 
         self.sendbuf = open(f'{self.dir}/sendbuf', 'r')
         self.recvbuf = open(f'{self.dir}/recvbuf', 'w')
+        self.logs = open(f'{self.dir}/artifacts/{self.id}/stdout', 'r')
 
     def _start(self, host, playbook):
         inv = {
@@ -55,7 +56,8 @@ class Runner:
             envvars=env,
             playbook=playbook,
             ident=self.id,
-            verbosity=3
+            verbosity=3,
+            quiet=True,
         )
 
     def teardown(self):
@@ -63,6 +65,7 @@ class Runner:
         self.id = None
         self.sendbuf.close()
         self.recvbuf.close()
+        self.logs.close()
         shutil.rmtree(self.dir)
 
 
@@ -94,6 +97,7 @@ def job_status(id):
 
     res = json.loads(runner.sendbuf.readline() or '{}')
     res['status'] = runner.runner.status
+    res['logs'] = runner.logs.read()
 
     if runner.runner.status not in ['started', 'running']:
         runner.teardown()

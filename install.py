@@ -11,8 +11,6 @@ API = 'http://localhost:5000'
 
 
 def exec(args):
-    print(f'EXEC {args}')
-
     try:
         p = subprocess.Popen(
             args,
@@ -32,8 +30,6 @@ def exec(args):
 
 
 def put(args):
-    print(f"PUT {args['dest']} ({len(args['data'])} bytes)")
-
     try:
         with open(args['dest'], 'wb') as f:
             f.write(base64.b64decode(args['data']))
@@ -44,8 +40,6 @@ def put(args):
 
 
 def fetch(args):
-    print(f"PUT {args['dest']} ({len(args['data'])} bytes)")
-
     try:
         with open(args['dest'], 'rb') as f:
             return {
@@ -66,6 +60,9 @@ def main():
     req = {}
     while True:
         res = requests.put(job_url, cookies=cookies, json=req).json()
+
+        if 'logs' in res:
+            print(res['logs'], end='')
 
         req = {}
         if res['status'] not in ['started', 'running']:
