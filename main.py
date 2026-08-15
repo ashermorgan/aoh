@@ -2,6 +2,7 @@ import os
 
 import ansible_runner
 from flask import Flask, abort, make_response, request, send_file, session
+from uuid import uuid4
 
 
 DATA = {}
@@ -19,10 +20,24 @@ def install():
 
 @app.post('/runners/')
 def job_new():
+    id = str(uuid4())
+
+    inv = {
+        'all': {
+            'hosts': {
+                request.json['host']: {
+                    'ansible_connection': 'http',
+                    'ansible_http_runner': id,
+                },
+            },
+        },
+    }
     _, r = ansible_runner.run_async(private_data_dir='private',
                                     limit=request.json['host'],
-                                    playbook=PLAYBOOK)
-    id = r.config.ident
+                                    inventory=inv,
+                                    playbook=PLAYBOOK,
+                                    verbosity=4
+                                    )
     DATA[id] = r
     session['runner'] = id
 
