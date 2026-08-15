@@ -6,49 +6,79 @@ import time
 
 import requests  # TODO: eliminate dependency?
 
+
 API = 'http://localhost:5000'
 
-res = requests.post(f'{API}/runners/', json={
-    'host': 'localhost',
-})
-cookies = res.cookies
 
-assert res.status_code == 201
+def exec(args):
+    print(f'EXEC {args}')
 
-job_url = f'{API}{res.headers['Location']}'
-
-req = {}
-while True:
-    res = requests.put(job_url, cookies=cookies, json=req).json()
-    if res['status'] not in ['started', 'running']:
-        break
-
-    req = {}
-    if (command := res.get('command')) is not None:
-        print('EXEC', command)
+    try:
         p = subprocess.Popen(
-            command,
+            args,
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
         stdout, stderr = p.communicate()
-        req['returncode'] = p.returncode
-        req['stdout'] = stdout.decode('latin1')
-        req['stderr'] = stderr.decode('latin1')
-        print('EXEC RETURN', p.returncode)
+        return {
+            'returncode': p.returncode,
+            'stdout': stdout.decode('latin1'),
+            'stderr': stderr.decode('latin1'),
+        }
+    except Exception as e:
+        return { 'err': str(e) }
 
-    elif (put := res.get('put')) is not None:
-        print('PUT', put['dest'], len(put['data']), 'bytes')
-        with open(put['dest'], 'wb') as f:
-            f.write(base64.b64decode(put['data']))
-        req['ok'] = True
 
-    elif (get := res.get('get')) is not None:
-        print('PUT', put['dest'], len(put['data']), 'bytes')
-        with open(put['dest'], 'rb') as f:
-            req['data'] = base64.b64encode(f.read()).decode()
+def put(args):
+    print(f"PUT {args['dest']} ({len(args['data'])} bytes)")
 
+    try:
+        with open(args['dest'], 'wb') as f:
+            f.write(base64.b64decode(args['data']))
+    except Exception as e:
+        return { 'err': str(e) }
     else:
-        time.sleep(0.1)
+        return { 'ok': True }
+
+
+def fetch(args):
+    print(f"PUT {args['dest']} ({len(args['data'])} bytes)")
+
+    try:
+        with open(args['dest'], 'rb') as f:
+            return {
+                'data': base64.b64encode(f.read()).decode(),
+            }
+    except Exception as e:
+        return { 'err': str(e) }
+
+
+def main():
+    res = requests.post(f'{API}/runners/', json={
+        'host': 'localhost',
+    })
+    assert res.status_code == 201
+    cookies = res.cookies
+    job_url = f'{API}{res.headers['Location']}'
+
+    req = {}
+    while True:
+        res = requests.put(job_url, cookies=cookies, json=req).json()
+
+        req = {}
+        if res['status'] not in ['started', 'running']:
+            break
+        elif 'exec' in res:
+            req = exec(res['exec'])
+        elif 'put' in res:
+            req = put(res['put'])
+        elif 'fetch' in res:
+            req = fetch(res['fetch'])
+        else:
+            time.sleep(0.1)
+
+
+if __name__ == '__main__':
+    main()

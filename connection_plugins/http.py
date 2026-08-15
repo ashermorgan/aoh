@@ -18,9 +18,10 @@ DOCUMENTATION = r'''
 # ruff: disable[E402]
 import base64
 import json
+import os
 import typing as t
 
-from ansible.module_utils.common.text.converters import to_text
+from ansible.errors import AnsibleFileNotFound, AnsibleError
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.display import Display
 # ruff: enable[E402]
@@ -58,7 +59,7 @@ class Connection(ConnectionBase):
 
     def exec_command(self, cmd: str, in_data: bytes | None = None,
                      sudoable: bool = True) -> tuple[int, bytes, bytes]:
-        """Run a command on the host (TODO)."""
+        """Run a command on the host."""
 
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
@@ -71,11 +72,13 @@ class Connection(ConnectionBase):
         # assert sudoable is False
 
         self.sendbuf.write(json.dumps({
-            'command': cmd,
+            'exec': cmd,
         }) + '\n')
         self.sendbuf.flush()
 
         res = json.loads(self.recvbuf.readline())
+        if 'err' in res:
+            raise AnsibleError(res['err'])
         return (
             res['returncode'],
             res['stdout'].encode('latin1'),
@@ -84,7 +87,7 @@ class Connection(ConnectionBase):
 
 
     def put_file(self, in_path: str, out_path: str) -> None:
-        """Transfer file to host (TODO)."""
+        """Transfer file to host."""
 
         super(Connection, self).put_file(in_path, out_path)
 
@@ -94,6 +97,8 @@ class Connection(ConnectionBase):
         assert self.sendbuf is not None
         assert self.recvbuf is not None
 
+        if not os.path.exists(in_path):
+            raise AnsibleFileNotFound(f'file or module does not exist: {in_path}')
         with open(in_path, 'rb') as f:
             data = base64.b64encode(f.read()).decode()
 
@@ -105,11 +110,13 @@ class Connection(ConnectionBase):
         }) + '\n')
         self.sendbuf.flush()
 
-        self.recvbuf.readline()
+        res = json.loads(self.recvbuf.readline())
+        if 'err' in res:
+            raise AnsibleError(res['err'])
 
 
     def fetch_file(self, in_path: str, out_path: str) -> None:
-        """Fetch file from host (TODO)."""
+        """Fetch file from host."""
 
         super(Connection, self).fetch_file(in_path, out_path)
 
@@ -120,11 +127,13 @@ class Connection(ConnectionBase):
         assert self.recvbuf is not None
 
         self.sendbuf.write(json.dumps({
-            'get': in_path,
+            'fetch': in_path,
         }) + '\n')
         self.sendbuf.flush()
 
         res = json.loads(self.recvbuf.readline())
+        if 'err' in res:
+            raise AnsibleError(res['err'])
         with open(out_path, 'rb') as f:
             f.write(base64.b64decode(res['data']))
 
