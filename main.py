@@ -1,7 +1,7 @@
 import os
 
 import ansible_runner
-from flask import Flask, abort, redirect, session
+from flask import Flask, abort, make_response, request, send_file, session
 
 
 DATA = {}
@@ -11,15 +11,22 @@ app = Flask(__name__)
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/' # TODO
 
 
-@app.route('/runners/new')
+@app.get('/install')
+@app.get('/install.py')
+def install():
+    return send_file('install.py')
+
+
+@app.post('/runners/')
 def job_new():
     _, r = ansible_runner.run_async(private_data_dir='private',
+                                    limit=request.json['host'],
                                     playbook=PLAYBOOK)
     id = r.config.ident
     DATA[id] = r
     session['runner'] = id
 
-    return redirect(f'/runners/{id}')
+    return make_response('', 201, {'Location': f'/runners/{id}'})
 
 
 @app.route('/runners/<id>')
