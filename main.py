@@ -19,16 +19,19 @@ app.secret_key = os.urandom(16)
 class Runner:
     def __init__(self, config, playbook, host):
         self.id = str(uuid4())
-        self.dir = tempfile.mkdtemp()
+        self._dir = tempfile.mkdtemp()
+        self._SENDBUF_PATH = f'{self._dir}/sendbuf'
+        self._RECVBUF_PATH = f'{self._dir}/recvbuf'
+        self._LOGS_PATH = f'{self._dir}/artifacts/{self.id}/stdout'
 
-        os.mkfifo(f'{self.dir}/sendbuf')
-        os.mkfifo(f'{self.dir}/recvbuf')
+        os.mkfifo(self._SENDBUF_PATH)
+        os.mkfifo(self._RECVBUF_PATH)
 
         self._start(config, playbook, host)
 
-        self.sendbuf = open(f'{self.dir}/sendbuf', 'r')
-        self.recvbuf = open(f'{self.dir}/recvbuf', 'w')
-        self.logs = open(f'{self.dir}/artifacts/{self.id}/stdout', 'r')
+        self._sendbuf = open(self._SENDBUF_PATH, 'r')
+        self._recvbuf = open(self._RECVBUF_PATH, 'w')
+        self._logs = open(self._LOGS_PATH, 'r')
 
 
     def _start(self, config, playbook, host):
@@ -48,12 +51,12 @@ class Runner:
             'ANSIBLE_CONFIG': config,
         }
         vars = {
-            'ansible_http_runner': self.dir,
+            'ansible_http_runner': self._dir,
             'ansible_connection': 'http',
         }
 
         self.thread, self.runner = ansible_runner.run_async(
-            private_data_dir=self.dir,
+            private_data_dir=self._dir,
             ident=self.id,
             envvars=env,
             extravars=vars,
@@ -67,13 +70,35 @@ class Runner:
         )
 
 
+    def _runner_finished(self):
+        return self.runner.status not in ['started', 'running']
+
+
+    def process_client_request(self, req):
+        res = {}
+
+        # We check runner status first, in case new logs come in afterwards
+        res['finished'] = self._runner_finished()
+        res['logs'] = self._logs.read()
+
+        if req:
+            self._recvbuf.write(json.dumps(req) + '\n')
+            self._recvbuf.flush()
+
+        line = self._sendbuf.readline()
+        for key, val in json.loads(line or '{}').items():
+            res[key] = val
+
+        return res
+
+
     def teardown(self):
         self.thread.join()
         self.id = None
-        self.sendbuf.close()
-        self.recvbuf.close()
-        self.logs.close()
-        shutil.rmtree(self.dir)
+        self._sendbuf.close()
+        self._recvbuf.close()
+        self._logs.close()
+        shutil.rmtree(self._dir)
 
 
 @app.get('/install')
@@ -96,18 +121,11 @@ def job_new():
 def job_status(id):
     if id != session.get('runner'):
         abort(401)
-    runner = DATA[id]
 
-    if request.json:
-        runner.recvbuf.write(json.dumps(request.json) + '\n')
-        runner.recvbuf.flush()
+    res = DATA[id].process_client_request(request.json)
 
-    res = json.loads(runner.sendbuf.readline() or '{}')
-    res['status'] = runner.runner.status
-    res['logs'] = runner.logs.read()
-
-    if runner.runner.status not in ['started', 'running']:
-        runner.teardown()
+    if res['finished']:
+        DATA[id].teardown()
         del DATA[id]
 
     return res

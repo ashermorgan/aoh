@@ -65,7 +65,7 @@ def main():
             print(res['logs'], end='')
 
         req = {}
-        if res['status'] not in ['started', 'running']:
+        if res['finished']:
             break
         elif 'exec' in res:
             req = exec(res['exec'])
