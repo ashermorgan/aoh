@@ -1,4 +1,4 @@
 - name: My play
-  hosts: localhost
+  hosts: myhost
   tasks:
     - ping:

@@ -50,7 +50,7 @@ def fetch(args):
 
 def main():
     res = requests.post(f'{API}/runners/', json={
-        'host': 'localhost',
+        'host': 'myhost',
     })
     assert res.status_code == 201
     cookies = res.cookies
