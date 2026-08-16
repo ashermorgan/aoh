@@ -16,6 +16,9 @@ app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
 
+class AoHError(Exception):
+    """Raised for AoC-specific errors."""
+
 class Runner:
     def __init__(self, config, playbook, host):
         self.id = str(uuid4())
@@ -125,10 +128,22 @@ class Runner:
         if self._recvbuf:
             self._recvbuf.close()
         if self._sendbuf:
+            try:
+                # Send an error in case the AoH connection plugin is currently
+                # blocking on a read
+                self._sendbuf.write('{"err":"Runner teardown"}\n')
+                self._sendbuf.flush()
+            except Exception:  # noqa: BLE001, S110
+                pass
             self._sendbuf.close()
+
         if self._thread:
-            # Closing the sendbuf should make Ansible exit if it hasn't already
-            self._thread.join()
+            # The Ansible runner *should* exit if it hasn't already due to a
+            # broken recvbuf pipe or the sendbuf error.
+            self._thread.join(10)
+            if self._thread.is_alive():
+                raise AoHError('Ansible runner thread not terminated')
+
         shutil.rmtree(self._dir)
 
 
