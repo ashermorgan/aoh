@@ -6,20 +6,14 @@ import time
 from uuid import uuid4
 
 import ansible_runner
-from flask import Flask, abort, make_response, request, send_file, session
 
-DATA = {}
-PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
-CONFIG = os.path.abspath('./demo/ansible.cfg') # TODO
-
-app = Flask(__name__)
-app.secret_key = os.urandom(16)
-
+_CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 
 class AoHError(Exception):
     """Raised for AoC-specific errors."""
 
-class Runner:
+
+class AoHRunner:
     def __init__(self, config, playbook, host):
         self.id = str(uuid4())
         self._dir = tempfile.mkdtemp()
@@ -65,8 +59,7 @@ class Runner:
 
         env = {
             'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
-                [os.path.abspath('./connection_plugins/')]
-                + connection_plugins
+                [_CONNECTION_PLUGIN_DIR] + connection_plugins
             ),
             'ANSIBLE_CONFIG': config,
         }
@@ -145,37 +138,3 @@ class Runner:
                 raise AoHError('Ansible runner thread not terminated')
 
         shutil.rmtree(self._dir)
-
-
-@app.get('/install')
-@app.get('/install.py')
-def install():
-    return send_file('install.py')
-
-
-@app.post('/runners/')
-def job_new():
-    runner = Runner(CONFIG, PLAYBOOK, request.json['host'])
-
-    DATA[runner.id] = runner
-    session['runner'] = runner.id
-
-    return make_response('', 201, {'Location': f'/runners/{runner.id}'})
-
-
-@app.put('/runners/<id>')
-def job_status(id):
-    if id != session.get('runner'):
-        abort(401)
-
-    res = DATA[id].process_client_request(request.json)
-
-    if res['finished']:
-        DATA[id].teardown()
-        del DATA[id]
-
-    return res
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
