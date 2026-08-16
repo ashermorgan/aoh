@@ -89,7 +89,7 @@ class Runner:
 
     def _runner_finished(self):
         assert self._runner is not None
-        return self._runner.status not in ['started', 'running']
+        return self._runner.status not in ['starting', 'running']
 
 
     def process_client_request(self, req):
