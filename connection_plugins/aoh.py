@@ -2,15 +2,15 @@
 # GNU General Public License v3.0+
 
 DOCUMENTATION = r'''
-    name: http
-    short_description: Control hosts over a "reverse" HTTP connection
+    name: aoh
+    short_description: Run tasks through an Ansible-over-HTTP (AoH) connection
 
     options:
-        runner:
-            description: The artifact directory of the associated Ansible runner
+        aoh_dir:
+            description: The AoH runner directory
             required: true
             vars:
-                - name: ansible_http_runner
+                - name: ansible_aoh_dir
 '''
 
 import base64
@@ -26,9 +26,9 @@ display = Display()
 
 
 class Connection(ConnectionBase):
-    """Reverse-HTTP connection."""
+    """Ansible-over-HTTP (AoH) connection."""
 
-    transport = 'http'
+    transport = 'aoh'
     has_pipelining = False
 
 
@@ -39,16 +39,16 @@ class Connection(ConnectionBase):
         self.recvbuf = None
 
     def _connect(self) -> Connection:  # noqa: F821
-        """Connect to the host (nop)."""
+        """Connect to the host."""
 
         if not self._connected:
-            display.vvv('ESTABLISH HTTP CONNECTION FOR RUNNER '
-                        f'{self.get_option('runner')}',
+            AOH_DIR = self.get_option('aoh_dir')
+
+            display.vvv(f'ESTABLISH CONNECTION TO AOH RUNNER {AOH_DIR}',
                         host=self._play_context.remote_addr)
 
-            RUNNER_DIR = self.get_option('runner')
-            RECVBUF_PATH = f'{RUNNER_DIR}/recvbuf'
-            SENDBUF_PATH = f'{RUNNER_DIR}/sendbuf'
+            RECVBUF_PATH = f'{AOH_DIR}/recvbuf'
+            SENDBUF_PATH = f'{AOH_DIR}/sendbuf'
 
             if not os.path.exists(RECVBUF_PATH):
                 os.mkfifo(RECVBUF_PATH)
@@ -147,7 +147,7 @@ class Connection(ConnectionBase):
     def close(self) -> None:
         """Close connection."""
 
-        display.vvv('CLOSE HTTP CONNECTION FOR RUNNER '
+        display.vvv('CLOSE CONNECTION FOR AOH RUNNER '
                     f'{self.get_option('runner')}',
                     host=self._play_context.remote_addr)
 

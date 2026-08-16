@@ -38,7 +38,7 @@ class Runner:
             self._logs = open(self._LOGS_PATH, 'r')  # noqa: SIM115
 
             # The FIFO buffers may not get created if Ansible crashes/exits
-            # before calling the http connection plugin
+            # before calling the AoH connection plugin
             while not os.path.exists(self._SENDBUF_PATH) and \
                     not self._runner_finished():
                 time.sleep(0.1)
@@ -68,8 +68,8 @@ class Runner:
             'ANSIBLE_CONFIG': config,
         }
         vars = {
-            'ansible_http_runner': self._dir,
-            'ansible_connection': 'http',
+            'ansible_aoh_dir': self._dir,
+            'ansible_connection': 'aoh',
         }
 
         self._thread, self._runner = ansible_runner.run_async(
