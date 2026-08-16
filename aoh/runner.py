@@ -49,8 +49,12 @@ class AoHRunner:
 
 
     def _start_runner(self, config, playbook, host):
-        raw_config = ansible_runner.get_ansible_config('dump', config,
-                                                       quiet=True)[0]
+        raw_config = ansible_runner.get_ansible_config(
+            'dump',
+            config,
+            private_data_dir=self._dir,
+            quiet=True,
+        )[0]
 
         connection_plugins = eval(next(
             x for x in raw_config.split('\n')
