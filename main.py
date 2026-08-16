@@ -1,3 +1,4 @@
+import time
 import json
 import os
 import shutil
@@ -20,21 +21,38 @@ class Runner:
     def __init__(self, config, playbook, host):
         self.id = str(uuid4())
         self._dir = tempfile.mkdtemp()
-        self._SENDBUF_PATH = f'{self._dir}/sendbuf'
-        self._RECVBUF_PATH = f'{self._dir}/recvbuf'
         self._LOGS_PATH = f'{self._dir}/artifacts/{self.id}/stdout'
+        self._RECVBUF_PATH = f'{self._dir}/recvbuf'
+        self._SENDBUF_PATH = f'{self._dir}/sendbuf'
+        self._sendbuf = None
+        self._recvbuf = None
+        self._logs = None
+        self._thread = None
+        self._runner = None
 
-        os.mkfifo(self._SENDBUF_PATH)
-        os.mkfifo(self._RECVBUF_PATH)
+        try:
+            self._start_runner(config, playbook, host)
 
-        self._start(config, playbook, host)
+            # We assume that ansible-runner will eventually create its log file
+            while not os.path.exists(self._LOGS_PATH):
+                time.sleep(0.1)
+            self._logs = open(self._LOGS_PATH, 'r')
 
-        self._sendbuf = open(self._SENDBUF_PATH, 'r')
-        self._recvbuf = open(self._RECVBUF_PATH, 'w')
-        self._logs = open(self._LOGS_PATH, 'r')
+            # The FIFO buffers may not get created if Ansible crashes/exits
+            # before calling the http connection plugin
+            while not os.path.exists(self._SENDBUF_PATH) and \
+                    not self._runner_finished():
+                time.sleep(0.1)
+            if os.path.exists(self._RECVBUF_PATH):
+                # Note that recvbuf is created first, so sendbuf will exist too
+                self._recvbuf = open(self._RECVBUF_PATH, 'w')
+                self._sendbuf = open(self._SENDBUF_PATH, 'r')
+        except:
+            self.teardown()
+            raise
 
 
-    def _start(self, config, playbook, host):
+    def _start_runner(self, config, playbook, host):
         raw_config = ansible_runner.get_ansible_config('dump', config,
                                                        quiet=True)[0]
 
@@ -55,7 +73,7 @@ class Runner:
             'ansible_connection': 'http',
         }
 
-        self.thread, self.runner = ansible_runner.run_async(
+        self._thread, self._runner = ansible_runner.run_async(
             private_data_dir=self._dir,
             ident=self.id,
             envvars=env,
@@ -71,7 +89,8 @@ class Runner:
 
 
     def _runner_finished(self):
-        return self.runner.status not in ['started', 'running']
+        assert self._runner is not None
+        return self._runner.status not in ['started', 'running']
 
 
     def process_client_request(self, req):
@@ -79,25 +98,38 @@ class Runner:
 
         # We check runner status first, in case new logs come in afterwards
         res['finished'] = self._runner_finished()
+        assert self._logs is not None
         res['logs'] = self._logs.read()
 
-        if req:
-            self._recvbuf.write(json.dumps(req) + '\n')
-            self._recvbuf.flush()
+        try:
+            if req and self._recvbuf:
+                self._recvbuf.write(json.dumps(req) + '\n')
+                self._recvbuf.flush()
 
-        line = self._sendbuf.readline()
-        for key, val in json.loads(line or '{}').items():
-            res[key] = val
+            if self._sendbuf:
+                line = self._sendbuf.readline()
+                for key, val in json.loads(line or '{}').items():
+                    res[key] = val
+        except Exception as e:
+            # This is probably a broken pipe, which indicates a fatal error.
+            # Then Ansible should exit soon.
+            if 'Broken pipe' not in str(e):
+                raise
 
         return res
 
 
     def teardown(self):
-        self.thread.join()
         self.id = None
-        self._sendbuf.close()
-        self._recvbuf.close()
-        self._logs.close()
+        if self._logs:
+            self._logs.close()
+        if self._recvbuf:
+            self._recvbuf.close()
+        if self._sendbuf:
+            self._sendbuf.close()
+        if self._thread:
+            # Closing the sendbuf should make Ansible exit if it hasn't already
+            self._thread.join()
         shutil.rmtree(self._dir)
 
 

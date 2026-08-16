@@ -50,8 +50,18 @@ class Connection(ConnectionBase):
                         f'{self.get_option('runner')}',
                         host=self._play_context.remote_addr)
 
-            self.sendbuf = open(f'{self.get_option('runner')}/sendbuf', 'w')
-            self.recvbuf = open(f'{self.get_option('runner')}/recvbuf', 'r')
+            RUNNER_DIR = self.get_option('runner')
+            RECVBUF_PATH = f'{RUNNER_DIR}/recvbuf'
+            SENDBUF_PATH = f'{RUNNER_DIR}/sendbuf'
+
+            if not os.path.exists(RECVBUF_PATH):
+                os.mkfifo(RECVBUF_PATH)
+            if not os.path.exists(SENDBUF_PATH):
+                os.mkfifo(SENDBUF_PATH)
+
+            self.recvbuf = open(RECVBUF_PATH, 'r')
+            self.sendbuf = open(SENDBUF_PATH, 'w')
+
             self._connected = True
 
         return self
@@ -141,9 +151,15 @@ class Connection(ConnectionBase):
     def close(self) -> None:
         """Close connection."""
 
-        self._connected = False
         display.vvv('CLOSE HTTP CONNECTION FOR RUNNER '
                     f'{self.get_option('runner')}',
                     host=self._play_context.remote_addr)
+
+        if self.recvbuf:
+            self.recvbuf.close()
+        if self.sendbuf:
+            self.sendbuf.close()
+
+        self._connected = False
 
         super(Connection, self).close()
