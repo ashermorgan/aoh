@@ -10,55 +10,62 @@ from uuid import uuid4
 
 DATA = {}
 PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
+CONFIG = os.path.abspath('./demo/ansible.cfg') # TODO
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
 
 class Runner:
-    def __init__(self, host, playbook):
+    def __init__(self, config, playbook, host):
         self.id = str(uuid4())
         self.dir = tempfile.mkdtemp()
 
         os.mkfifo(f'{self.dir}/sendbuf')
         os.mkfifo(f'{self.dir}/recvbuf')
 
-        self._start(host, playbook)
+        self._start(config, playbook, host)
 
         self.sendbuf = open(f'{self.dir}/sendbuf', 'r')
         self.recvbuf = open(f'{self.dir}/recvbuf', 'w')
         self.logs = open(f'{self.dir}/artifacts/{self.id}/stdout', 'r')
 
-    def _start(self, host, playbook):
-        inv = {
-            'all': {
-                'hosts': {
-                    host: {
-                        'ansible_connection': 'http',
-                        'ansible_http_runner': self.dir,
-                    },
-                },
-            },
-        }
+
+    def _start(self, config, playbook, host):
+        raw_config = ansible_runner.get_ansible_config('dump', config,
+                                                       quiet=True)[0]
+
+        connection_plugins = eval([
+            x for x in raw_config.split('\n')
+            if x.startswith('DEFAULT_CONNECTION_PLUGIN_PATH')
+        ][0].split('= ')[1])
+
         env = {
-            'ANSIBLE_CONNECTION_PLUGINS': ':'.join([
-                os.path.abspath('./connection_plugins/'), # TODO
-                # Default paths:
-                'demo/plugins/connection', # TODO
-                '/usr/share/ansible/plugins/connection',
-            ])
+            'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
+                [os.path.abspath('./connection_plugins/')]
+                + connection_plugins
+            ),
+            'ANSIBLE_CONFIG': config,
+        }
+        vars = {
+            'ansible_http_runner': self.dir,
+            'ansible_connection': 'http',
         }
 
         self.thread, self.runner = ansible_runner.run_async(
             private_data_dir=self.dir,
-            limit=host,
-            inventory=inv,
-            envvars=env,
-            playbook=playbook,
             ident=self.id,
-            verbosity=3,
+            envvars=env,
+            extravars=vars,
+
+            playbook=playbook,
+            limit=host,
+
+            # verbosity=3,
             quiet=True,
+            suppress_env_files=True,
         )
+
 
     def teardown(self):
         self.thread.join()
@@ -77,7 +84,7 @@ def install():
 
 @app.post('/runners/')
 def job_new():
-    runner = Runner(request.json['host'], PLAYBOOK)
+    runner = Runner(CONFIG, PLAYBOOK, request.json['host'])
 
     DATA[runner.id] = runner
     session['runner'] = runner.id
