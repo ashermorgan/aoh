@@ -6,7 +6,7 @@ import time
 
 import requests  # TODO: eliminate dependency?
 
-API = 'http://localhost:5000'
+API = '{{ API_URL }}' # Substitution performed by Flask
 
 
 def exec(args):

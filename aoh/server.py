@@ -1,13 +1,13 @@
 import os
 
-from flask import Flask, abort, make_response, request, send_file, session
+from flask import Flask, abort, make_response, render_template, request, session
 
 from .runner import AoHRunner
 
 PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
 CONFIG = os.path.abspath('./demo/ansible.cfg') # TODO
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.path.dirname(__file__))
 app.secret_key = os.urandom(16)
 
 _DATA = {}
@@ -16,7 +16,7 @@ _DATA = {}
 @app.get('/install')
 @app.get('/install.py')
 def install():
-    return send_file('install.py')
+    return render_template('install.py', API_URL=request.host_url[:-1])
 
 
 @app.post('/runners/')
