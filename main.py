@@ -1,13 +1,12 @@
-import time
 import json
 import os
 import shutil
 import tempfile
+import time
+from uuid import uuid4
 
 import ansible_runner
 from flask import Flask, abort, make_response, request, send_file, session
-from uuid import uuid4
-
 
 DATA = {}
 PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
@@ -36,7 +35,7 @@ class Runner:
             # We assume that ansible-runner will eventually create its log file
             while not os.path.exists(self._LOGS_PATH):
                 time.sleep(0.1)
-            self._logs = open(self._LOGS_PATH, 'r')
+            self._logs = open(self._LOGS_PATH, 'r')  # noqa: SIM115
 
             # The FIFO buffers may not get created if Ansible crashes/exits
             # before calling the http connection plugin
@@ -45,8 +44,8 @@ class Runner:
                 time.sleep(0.1)
             if os.path.exists(self._RECVBUF_PATH):
                 # Note that recvbuf is created first, so sendbuf will exist too
-                self._recvbuf = open(self._RECVBUF_PATH, 'w')
-                self._sendbuf = open(self._SENDBUF_PATH, 'r')
+                self._recvbuf = open(self._RECVBUF_PATH, 'w')  # noqa: SIM115
+                self._sendbuf = open(self._SENDBUF_PATH, 'r')  # noqa: SIM115
         except:
             self.teardown()
             raise
@@ -56,10 +55,10 @@ class Runner:
         raw_config = ansible_runner.get_ansible_config('dump', config,
                                                        quiet=True)[0]
 
-        connection_plugins = eval([
+        connection_plugins = eval(next(
             x for x in raw_config.split('\n')
             if x.startswith('DEFAULT_CONNECTION_PLUGIN_PATH')
-        ][0].split('= ')[1])
+        ).split('= ')[1])
 
         env = {
             'ANSIBLE_CONNECTION_PLUGINS': ':'.join(

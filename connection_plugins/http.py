@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 # Copyright: (c) 2026, Asher Morgan <asher@ashermorgan.net>
 # GNU General Public License v3.0+
 
@@ -15,16 +13,14 @@ DOCUMENTATION = r'''
                 - name: ansible_http_runner
 '''
 
-# ruff: disable[E402]
 import base64
 import json
 import os
 import typing as t
 
-from ansible.errors import AnsibleFileNotFound, AnsibleError
+from ansible.errors import AnsibleError, AnsibleFileNotFound
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.display import Display
-# ruff: enable[E402]
 
 display = Display()
 
@@ -37,7 +33,7 @@ class Connection(ConnectionBase):
 
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
-        super(Connection, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.sendbuf = None
         self.recvbuf = None
@@ -59,8 +55,8 @@ class Connection(ConnectionBase):
             if not os.path.exists(SENDBUF_PATH):
                 os.mkfifo(SENDBUF_PATH)
 
-            self.recvbuf = open(RECVBUF_PATH, 'r')
-            self.sendbuf = open(SENDBUF_PATH, 'w')
+            self.recvbuf = open(RECVBUF_PATH, 'r')  # noqa: SIM115
+            self.sendbuf = open(SENDBUF_PATH, 'w')  # noqa: SIM115
 
             self._connected = True
 
@@ -71,7 +67,7 @@ class Connection(ConnectionBase):
                      sudoable: bool = True) -> tuple[int, bytes, bytes]:
         """Run a command on the host."""
 
-        super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
+        super().exec_command(cmd, in_data=in_data, sudoable=sudoable)
 
         display.vvv(f'EXEC {cmd}', host=self._play_context.remote_addr)
 
@@ -99,7 +95,7 @@ class Connection(ConnectionBase):
     def put_file(self, in_path: str, out_path: str) -> None:
         """Transfer file to host."""
 
-        super(Connection, self).put_file(in_path, out_path)
+        super().put_file(in_path, out_path)
 
         display.vvv(f'PUT {in_path} TO {out_path}',
                     host=self._play_context.remote_addr)
@@ -128,7 +124,7 @@ class Connection(ConnectionBase):
     def fetch_file(self, in_path: str, out_path: str) -> None:
         """Fetch file from host."""
 
-        super(Connection, self).fetch_file(in_path, out_path)
+        super().fetch_file(in_path, out_path)
 
         display.vvv(f'FETCH {in_path} TO {out_path}',
                     host=self._play_context.remote_addr)
@@ -162,4 +158,4 @@ class Connection(ConnectionBase):
 
         self._connected = False
 
-        super(Connection, self).close()
+        super().close()

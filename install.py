@@ -6,7 +6,6 @@ import time
 
 import requests  # TODO: eliminate dependency?
 
-
 API = 'http://localhost:5000'
 
 
@@ -25,7 +24,7 @@ def exec(args):
             'stdout': stdout.decode('latin1'),
             'stderr': stderr.decode('latin1'),
         }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return { 'err': str(e) }
 
 
@@ -33,7 +32,7 @@ def put(args):
     try:
         with open(args['dest'], 'wb') as f:
             f.write(base64.b64decode(args['data']))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return { 'err': str(e) }
     else:
         return { 'ok': True }
@@ -45,7 +44,7 @@ def fetch(args):
             return {
                 'data': base64.b64encode(f.read()).decode(),
             }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return { 'err': str(e) }
 
 
