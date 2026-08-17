@@ -1,11 +1,9 @@
 import os
 
+import yaml
 from flask import Flask, abort, make_response, render_template, request, session
 
 from .runner import AoHRunner
-
-PLAYBOOK = os.path.abspath('./demo/playbook.yml') # TODO
-CONFIG = os.path.abspath('./demo/ansible.cfg') # TODO
 
 app = Flask(__name__, template_folder=os.path.dirname(__file__))
 app.secret_key = os.urandom(16)
@@ -64,7 +62,15 @@ def job_new():
     if not _validate_args(request.json['args']):
         return { 'err': 'Bad or banned arguments passed.' }, 400
 
-    runner = AoHRunner(CONFIG, PLAYBOOK, request.json['args'])
+    with open('config.yml', 'r') as f:
+        CONFIG = yaml.safe_load(f)
+
+    playbook = CONFIG.get(request.json['playbook'])
+    if not playbook:
+        return { 'err': f"Playbook not found: {request.json['playbook']}" }, 400
+
+    runner = AoHRunner(playbook['config'], playbook['playbook'],
+                       request.json['args'])
 
     _DATA[runner.id] = runner
     session['runner'] = runner.id

@@ -51,7 +51,8 @@ def fetch(args):
 
 def main():
     res = requests.post(f'{API}/runners/', json={
-        'args': ' '.join(sys.argv[1:]),
+        'playbook': sys.argv[1] if len(sys.argv) >= 2 else 'main',
+        'args': ' '.join(sys.argv[2:]),
     })
     if res.status_code != 201:
         print(res.json()['err'])
