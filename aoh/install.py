@@ -2,6 +2,7 @@
 
 import base64
 import subprocess
+import sys
 import time
 
 import requests  # TODO: eliminate dependency?
@@ -50,9 +51,12 @@ def fetch(args):
 
 def main():
     res = requests.post(f'{API}/runners/', json={
-        'host': 'myhost',
+        'args': ' '.join(sys.argv[1:]),
     })
-    assert res.status_code == 201
+    if res.status_code != 201:
+        print(res.json()['err'])
+        sys.exit(1)
+
     cookies = res.cookies
     job_url = f'{API}{res.headers['Location']}'
 
@@ -64,6 +68,9 @@ def main():
             print(res['logs'], end='')
 
         req = {}
+        if 'err' in res:
+            print(res['err'])
+            sys.exit(1)
         if res['finished']:
             break
         elif 'exec' in res:

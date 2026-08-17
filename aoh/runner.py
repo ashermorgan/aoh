@@ -14,7 +14,7 @@ class AoHError(Exception):
 
 
 class AoHRunner:
-    def __init__(self, config, playbook, host):
+    def __init__(self, config, playbook, args):
         self.id = str(uuid4())
         self._dir = tempfile.mkdtemp()
         self._LOGS_PATH = f'{self._dir}/artifacts/{self.id}/stdout'
@@ -27,7 +27,7 @@ class AoHRunner:
         self._runner = None
 
         try:
-            self._start_runner(config, playbook, host)
+            self._start_runner(config, playbook, args)
 
             # We assume that ansible-runner will eventually create its log file
             while not os.path.exists(self._LOGS_PATH):
@@ -48,7 +48,7 @@ class AoHRunner:
             raise
 
 
-    def _start_runner(self, config, playbook, host):
+    def _start_runner(self, config, playbook, args):
         raw_config = ansible_runner.get_ansible_config(
             'dump',
             config,
@@ -77,9 +77,9 @@ class AoHRunner:
             ident=self.id,
             envvars=env,
             extravars=vars,
+            cmdline=args,
 
             playbook=playbook,
-            limit=host,
 
             # verbosity=3,
             quiet=True,
