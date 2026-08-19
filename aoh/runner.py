@@ -116,39 +116,47 @@ class AoHRunner:
         assert self._logs is not None
         res['logs'] = self._logs.read()
 
-        try:
-            if req and self._recvbuf:
+        if req and self._recvbuf:
+            try:
                 self._recvbuf.write(json.dumps(req) + '\n')
                 self._recvbuf.flush()
+            except BrokenPipeError:
+                # Ansible should exit soon on its own
+                pass
 
-            if self._sendbuf:
-                line = self._sendbuf.readline()
-                for key, val in json.loads(line or '{}').items():
-                    res[key] = val
-        except Exception as e:
-            # This is probably a broken pipe, which indicates a fatal error.
-            # Then Ansible should exit soon.
-            if 'Broken pipe' not in str(e):
-                raise
+        if self._sendbuf:
+            line = self._sendbuf.readline()
+            for key, val in json.loads(line or '{}').items():
+                res[key] = val
 
         return res
 
 
     def teardown(self):
         self.id = None
+
         if self._logs:
             self._logs.close()
+
         if self._recvbuf:
-            self._recvbuf.close()
-        if self._sendbuf:
             try:
                 # Send an error in case the AoH connection plugin is currently
                 # blocking on a read
-                self._sendbuf.write('{"err":"Runner teardown"}\n')
-                self._sendbuf.flush()
-            except Exception:  # noqa: BLE001, S110
+                self._recvbuf.write('{"err":"Runner teardown"}\n')
+                self._recvbuf.flush()
+            except BrokenPipeError:
                 pass
-            self._sendbuf.close()
+
+            try:
+                self._recvbuf.close()
+            except BrokenPipeError:
+                pass
+
+        if self._sendbuf:
+            try:
+                self._sendbuf.close()
+            except BrokenPipeError:
+                pass
 
         if self._thread:
             # The Ansible runner *should* exit if it hasn't already due to a
