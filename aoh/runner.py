@@ -16,7 +16,7 @@ class AoHError(Exception):
 class AoHRunner:
     def __init__(self, config, playbook, host, args):
         self.id = str(uuid4())
-        self._dir = tempfile.mkdtemp()
+        self._dir = tempfile.mkdtemp(prefix='aoh-')
         self._LOGS_PATH = f'{self._dir}/artifacts/{self.id}/stdout'
         self._RECVBUF_PATH = f'{self._dir}/recvbuf'
         self._SENDBUF_PATH = f'{self._dir}/sendbuf'
