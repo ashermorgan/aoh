@@ -44,6 +44,13 @@ class Connection(ConnectionBase):
         if not self._connected:
             AOH_DIR = self.get_option('aoh_dir')
 
+            with open(f'{AOH_DIR}/hostname', 'r') as f:
+                hostname = f.readline().strip()
+                if hostname != self._play_context.remote_addr:
+                    raise AnsibleError('Attempted to connect to an AoH runner '
+                                       'belonging to a different host '
+                                       f'({hostname})')
+
             display.vvv(f'ESTABLISH CONNECTION TO AOH RUNNER {AOH_DIR}',
                         host=self._play_context.remote_addr)
 

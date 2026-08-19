@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import base64
+import platform
 import subprocess
 import sys
 import time
@@ -51,6 +52,7 @@ def fetch(args):
 
 def main():
     res = requests.post(f'{API}/runners/', json={
+        'host': platform.node() or 'aoh_node',
         'playbook': sys.argv[1] if len(sys.argv) >= 2 else 'main',
         'args': ' '.join(sys.argv[2:]),
     })

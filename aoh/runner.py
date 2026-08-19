@@ -14,7 +14,7 @@ class AoHError(Exception):
 
 
 class AoHRunner:
-    def __init__(self, config, playbook, args):
+    def __init__(self, config, playbook, host, args):
         self.id = str(uuid4())
         self._dir = tempfile.mkdtemp()
         self._LOGS_PATH = f'{self._dir}/artifacts/{self.id}/stdout'
@@ -27,6 +27,16 @@ class AoHRunner:
         self._runner = None
 
         try:
+            # Create hostname file so connection plugin can verify hosts
+            with open(f'{self._dir}/hostname', 'w') as f:
+                f.write(f'{host}\n')
+
+            # Set ansible_connection=aoh for the client host only. Note that we
+            # don't use ansible-runners inventory directory because that will
+            # shadow user inventory files.
+            with open(f'{self._dir}/inventory.ini', 'w') as f:
+                f.write(f'[aoh]\n{host} ansible_connection=aoh')
+
             self._start_runner(config, playbook, args)
 
             # We assume that ansible-runner will eventually create its log file
@@ -60,16 +70,22 @@ class AoHRunner:
             x for x in raw_config.split('\n')
             if x.startswith('DEFAULT_CONNECTION_PLUGIN_PATH')
         ).split('= ')[1])
+        inventory = eval(next(
+            x for x in raw_config.split('\n')
+            if x.startswith('DEFAULT_HOST_LIST')
+        ).split('= ')[1])
 
         env = {
             'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
                 [_CONNECTION_PLUGIN_DIR] + connection_plugins
             ),
             'ANSIBLE_CONFIG': config,
+            'ANSIBLE_INVENTORY': ','.join(
+                [f'{self._dir}/inventory.ini'] + inventory
+            ),
         }
         vars = {
             'ansible_aoh_dir': self._dir,
-            'ansible_connection': 'aoh',
         }
 
         self._thread, self._runner = ansible_runner.run_async(

@@ -70,7 +70,7 @@ def job_new():
         return { 'err': f"Playbook not found: {request.json['playbook']}" }, 400
 
     runner = AoHRunner(playbook['config'], playbook['playbook'],
-                       request.json['args'])
+                       request.json['host'], request.json['args'])
 
     _DATA[runner.id] = runner
     session['runner'] = runner.id
