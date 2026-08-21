@@ -2,13 +2,31 @@ import os
 
 import yaml
 from flask import Flask, abort, make_response, render_template, request, session
+from flask_apscheduler import APScheduler
 
 from .runner import AoHRunner
+
+_RUNNERS = {}
+_LAST_GC = 0
+_GC_INTERVAL = 60 # 1 minute
 
 app = Flask(__name__, template_folder=os.path.dirname(__file__))
 app.secret_key = os.urandom(16)
 
-_DATA = {}
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
+
+
+@scheduler.task('interval', seconds=_GC_INTERVAL)
+def gc():
+    """Teardown and delete timed-out runners."""
+
+    runners = list(_RUNNERS.items())
+    for id, runner in runners:
+        if runner and runner.has_timed_out():
+            runner.teardown()
+            _RUNNERS.pop(id, None)
 
 
 def _get_opts(cmdline):
@@ -72,7 +90,7 @@ def job_new():
     runner = AoHRunner(playbook['config'], playbook['playbook'],
                        request.json['host'], request.json['args'])
 
-    _DATA[runner.id] = runner
+    _RUNNERS[runner.id] = runner
     session['runner'] = runner.id
 
     return make_response('', 201, {'Location': f'/runners/{runner.id}'})
@@ -83,10 +101,14 @@ def job_status(id):
     if id != session.get('runner'):
         abort(401)
 
-    res = _DATA[id].process_client_request(request.json)
+    runner = _RUNNERS.get(id)
+    if not runner:
+        abort(400)
+
+    res = runner.process_client_request(request.json)
 
     if res['finished']:
-        _DATA[id].teardown()
-        del _DATA[id]
+        runner.teardown()
+        _RUNNERS.pop(id, None)
 
     return res
