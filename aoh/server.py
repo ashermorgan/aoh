@@ -69,10 +69,10 @@ def _validate_args(cmdline):
     return True
 
 
-@app.get('/install')
-@app.get('/install.py')
+@app.get('/run')
+@app.get('/run.py')
 def install():
-    return render_template('install.py', API_URL=request.host_url[:-1])
+    return render_template('client.py', API_URL=request.host_url[:-1])
 
 
 @app.post('/runners/')
