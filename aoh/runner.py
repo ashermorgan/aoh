@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import shutil
 import tempfile
 import time
@@ -107,7 +108,7 @@ class AoHRunner:
             ident=self.id,
             envvars=env,
             extravars=vars,
-            cmdline=args,
+            cmdline=' '.join(shlex.quote(arg) for arg in args),
 
             playbook=playbook,
 

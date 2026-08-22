@@ -28,9 +28,9 @@ def gc():
             _RUNNERS.pop(id, None)
 
 
-def _get_opts(cmdline):
+def _get_opts(args):
     opts = []
-    for arg in cmdline.split():
+    for arg in args:
         if arg.startswith('--'):
             opts += [arg.split('=')[0]]
         elif arg.startswith('-'):
@@ -39,9 +39,9 @@ def _get_opts(cmdline):
     return opts
 
 
-def _validate_args(cmdline):
+def _validate_args(args):
     # Reject any sign of Jinja expressions
-    if '{{' in cmdline or '{%' in cmdline:
+    if '{{' in ' '.join(args) or '{%' in ' '.join(args):
         return False
 
     # Enforce whitelisted options. Other options either might not be supported
@@ -60,9 +60,8 @@ def _validate_args(cmdline):
         '--verbose', '-v',
         '--version',
     ]
-    for opt in _get_opts(cmdline):
+    for opt in _get_opts(args):
         if opt not in OPT_WHITELIST:
-            print('bad', opt)
             return False
 
     return True
