@@ -1,7 +1,7 @@
 # Copyright: (c) 2026, Asher Morgan <asher@ashermorgan.net>
 # GNU General Public License v3.0+
 
-DOCUMENTATION = r'''
+DOCUMENTATION = """
     name: aoh
     short_description: Run tasks through an Ansible-over-HTTP (AoH) connection
 
@@ -11,7 +11,7 @@ DOCUMENTATION = r'''
             required: true
             vars:
                 - name: ansible_aoh_dir
-'''
+"""
 
 import base64
 import json
@@ -37,6 +37,7 @@ class Connection(ConnectionBase):
 
         self.sendbuf = None
         self.recvbuf = None
+
 
     def _connect(self) -> Connection:  # noqa: F821
         """Connect to the host."""
@@ -100,7 +101,7 @@ class Connection(ConnectionBase):
 
 
     def put_file(self, in_path: str, out_path: str) -> None:
-        """Transfer file to host."""
+        """Transfer a file to the host."""
 
         super().put_file(in_path, out_path)
 
@@ -129,7 +130,7 @@ class Connection(ConnectionBase):
 
 
     def fetch_file(self, in_path: str, out_path: str) -> None:
-        """Fetch file from host."""
+        """Fetch a file from the host."""
 
         super().fetch_file(in_path, out_path)
 
@@ -152,7 +153,7 @@ class Connection(ConnectionBase):
 
 
     def close(self) -> None:
-        """Close connection."""
+        """Close connection with host."""
 
         display.vvv('CLOSE CONNECTION FOR AOH RUNNER '
                     f'{self.get_option('runner')}',

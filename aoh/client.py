@@ -12,6 +12,8 @@ API = '{{ API_URL }}' # Substitution performed by Flask
 
 
 def exec(args):
+    """Run a command on the local host."""
+
     try:
         p = subprocess.Popen(
             args,
@@ -31,6 +33,8 @@ def exec(args):
 
 
 def put(args):
+    """Transfer a file to the local host."""
+
     try:
         with open(args['dest'], 'wb') as f:
             f.write(base64.b64decode(args['data']))
@@ -41,6 +45,8 @@ def put(args):
 
 
 def fetch(args):
+    """Fetch a file from the local host."""
+
     try:
         with open(args['dest'], 'rb') as f:
             return {
@@ -51,6 +57,8 @@ def fetch(args):
 
 
 def main():
+    """Main execution loop."""
+
     res = requests.post(f'{API}/runners/', json={
         'host': platform.node() or 'aoh_node',
         'playbook': sys.argv[1] if len(sys.argv) >= 2 else 'main',
@@ -61,11 +69,11 @@ def main():
         sys.exit(1)
 
     cookies = res.cookies
-    job_url = f'{API}{res.headers['Location']}'
+    runner_url = f'{API}{res.headers['Location']}'
 
     req = {}
     while True:
-        res = requests.put(job_url, cookies=cookies, json=req).json()
+        res = requests.put(runner_url, cookies=cookies, json=req).json()
 
         if 'logs' in res:
             print(res['logs'], end='')
@@ -74,7 +82,7 @@ def main():
         if 'err' in res:
             print(res['err'])
             sys.exit(1)
-        if res['finished']:
+        if res.get('finished'):
             break
         elif 'exec' in res:
             req = exec(res['exec'])

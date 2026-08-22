@@ -21,14 +21,14 @@ class AoHRunner:
     def __init__(self, config, playbook, host, args):
         """Create a new AoH runner."""
 
-        self.id = str(uuid4())
+        self.id = str(uuid4()) # Runner ID (set to None after teardown)
 
         self._lock = Lock() # Used to protect all public methods
 
-        self._dir = tempfile.mkdtemp(prefix='aoh-')
-        self._LOGS_PATH = f'{self._dir}/artifacts/{self.id}/stdout'
-        self._RECVBUF_PATH = f'{self._dir}/recvbuf'
-        self._SENDBUF_PATH = f'{self._dir}/sendbuf'
+        self._DIR = tempfile.mkdtemp(prefix='aoh-')
+        self._LOGS_PATH = f'{self._DIR}/artifacts/{self.id}/stdout'
+        self._RECVBUF_PATH = f'{self._DIR}/recvbuf'
+        self._SENDBUF_PATH = f'{self._DIR}/sendbuf'
         self._sendbuf = None
         self._recvbuf = None
         self._logs = None
@@ -40,7 +40,7 @@ class AoHRunner:
 
         try:
             # Create hostname file so connection plugin can verify hosts
-            with open(f'{self._dir}/hostname', 'w') as f:
+            with open(f'{self._DIR}/hostname', 'w') as f:
                 f.write(f'{host}\n')
 
             self._start_runner(config, playbook, host, args)
@@ -68,15 +68,15 @@ class AoHRunner:
         """Configure and start the underlying ansible-runner."""
 
         # Set ansible_connection=aoh for the client host only. Note that we
-        # don't use ansible-runners inventory directory because that will
+        # don't use ansible-runner's inventory directory because that will
         # shadow user inventory files.
-        with open(f'{self._dir}/inventory.ini', 'w') as f:
+        with open(f'{self._DIR}/inventory.ini', 'w') as f:
             f.write(f'[aoh]\n{host} ansible_connection=aoh')
 
         raw_config = ansible_runner.get_ansible_config(
             'dump',
             config,
-            private_data_dir=self._dir,
+            private_data_dir=self._DIR,
             quiet=True,
         )[0]
 
@@ -95,15 +95,15 @@ class AoHRunner:
             ),
             'ANSIBLE_CONFIG': config,
             'ANSIBLE_INVENTORY': ','.join(
-                [f'{self._dir}/inventory.ini'] + inventory
+                [f'{self._DIR}/inventory.ini'] + inventory
             ),
         }
         vars = {
-            'ansible_aoh_dir': self._dir,
+            'ansible_aoh_dir': self._DIR,
         }
 
         self._thread, self._runner = ansible_runner.run_async(
-            private_data_dir=self._dir,
+            private_data_dir=self._DIR,
             ident=self.id,
             envvars=env,
             extravars=vars,
@@ -111,7 +111,6 @@ class AoHRunner:
 
             playbook=playbook,
 
-            # verbosity=3,
             quiet=True,
             suppress_env_files=True,
         )
@@ -134,8 +133,6 @@ class AoHRunner:
     def process_client_request(self, req):
         """Process an AoH client request."""
 
-        res = {}
-
         with self._lock:
             if self.id is None:
                 # Runner has already been torn down
@@ -144,10 +141,12 @@ class AoHRunner:
                     'err': 'Client timeout',
                 }
 
+            res = {}
             self._last_req = time.time()
 
             # We check runner status first, in case new logs come in afterwards
             res['finished'] = self._runner_finished()
+
             assert self._logs is not None
             res['logs'] = self._logs.read()
 
@@ -206,4 +205,4 @@ class AoHRunner:
                 if self._thread.is_alive():
                     raise AoHError('Ansible runner thread not terminated')
 
-            shutil.rmtree(self._dir)
+            shutil.rmtree(self._DIR)

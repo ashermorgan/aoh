@@ -7,7 +7,6 @@ from flask_apscheduler import APScheduler
 from .runner import AoHRunner
 
 _RUNNERS = {}
-_LAST_GC = 0
 _GC_INTERVAL = 60 # 1 minute
 
 app = Flask(__name__, template_folder=os.path.dirname(__file__))
@@ -76,7 +75,7 @@ def install():
 
 
 @app.post('/runners/')
-def job_new():
+def new_runner():
     if not _validate_args(request.json['args']):
         return { 'err': 'Bad or banned arguments passed.' }, 400
 
@@ -97,7 +96,7 @@ def job_new():
 
 
 @app.put('/runners/<id>')
-def job_status(id):
+def runner_update(id):
     if id != session.get('runner'):
         abort(401)
 
