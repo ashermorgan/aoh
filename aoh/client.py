@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import base64
+import os
 import platform
 import subprocess
 import sys
@@ -56,13 +57,13 @@ def fetch(args):
         return { 'err': str(e) }
 
 
-def main():
+def main(playbook, args):
     """Main execution loop."""
 
     res = requests.post(f'{API}/runners/', json={
         'host': platform.node() or 'aoh_node',
-        'playbook': sys.argv[1] if len(sys.argv) >= 2 else 'main',
-        'args': sys.argv[2:],
+        'playbook': playbook,
+        'args': args,
     })
     if res.status_code != 201:
         print(res.json()['err'])
@@ -94,5 +95,40 @@ def main():
             time.sleep(0.1)
 
 
+def cli(args):
+    """Execute the AoH client CLI."""
+
+    if '-h' in args or '--help' in args:
+        if len(args) >= 1 and args[0] != '-':
+            prog = args[0]
+        else:
+            prog = f'curl {API}/run | {os.path.basename(sys.executable)} -'
+
+        print(f'Usage: {prog} [-h] [<playbook>] [<opts>...]')
+        print()
+        print('Runs an Ansible playbook on a remote server over an HTTP '
+              'connection.')
+        print()
+        print('Arguments: ')
+        print('  playbook          The name of the playbook to run (defaults '
+              'to "main")')
+        print()
+        print('Options: ')
+        print('  -h, --help        Show this help message and exit')
+        print('  <opts>            Any server-approved ansible-playbook(1) '
+              'options')
+
+        sys.exit(0)
+
+    if len(args) >= 2 and not args[1].startswith('-'):
+        playbook = args[1]
+        aoh_args = args[2:]
+    else:
+        playbook = 'main'
+        aoh_args = args[1:]
+
+    main(playbook, aoh_args)
+
+
 if __name__ == '__main__':
-    main()
+    cli(sys.argv)
