@@ -1,10 +1,10 @@
 import os
 
-import yaml
 from flask import Flask, abort, make_response, render_template, request, session
 from flask_apscheduler import APScheduler
 
-from .runner import AoHRunner
+from .playbook import get_playbook
+from .runner import Runner
 
 _RUNNERS = {}
 _GC_INTERVAL = 60 # 1 minute
@@ -14,7 +14,6 @@ app.secret_key = os.urandom(16)
 
 scheduler = APScheduler()
 scheduler.init_app(app)
-scheduler.start()
 
 
 @scheduler.task('interval', seconds=_GC_INTERVAL)
@@ -28,45 +27,6 @@ def gc():
             _RUNNERS.pop(id, None)
 
 
-def _get_opts(args):
-    opts = []
-    for arg in args:
-        if arg.startswith('--'):
-            opts += [arg.split('=')[0]]
-        elif arg.startswith('-'):
-            for opt in arg.split('=')[0][1:]:
-                opts += ['-' + opt]
-    return opts
-
-
-def _validate_args(args):
-    # Reject any sign of Jinja expressions
-    if '{{' in ' '.join(args) or '{%' in ' '.join(args):
-        return False
-
-    # Enforce whitelisted options. Other options either might not be supported
-    # yet, or may pose security risks.
-    OPT_WHITELIST = [
-        '--check', '-C',
-        '--diff', '-D',
-        '--extra-vars', '-e',
-        '--help', '-h',
-        '--limit', '-l',
-        '--list-tags',
-        '--skip-tags',
-        '--start-at-task',
-        '--step',
-        '--tags', '-t',
-        '--verbose', '-v',
-        '--version',
-    ]
-    for opt in _get_opts(args):
-        if opt not in OPT_WHITELIST:
-            return False
-
-    return True
-
-
 @app.get('/run')
 @app.get('/run.py')
 def install():
@@ -75,18 +35,14 @@ def install():
 
 @app.post('/runners/')
 def new_runner():
-    if not _validate_args(request.json['args']):
-        return { 'err': 'Bad or banned arguments passed.' }, 400
-
-    with open('config.yml', 'r') as f:
-        CONFIG = yaml.safe_load(f)
-
-    playbook = CONFIG.get(request.json['playbook'])
+    playbook = get_playbook(request.json['playbook'])
     if not playbook:
         return { 'err': f"Playbook not found: {request.json['playbook']}" }, 400
 
-    runner = AoHRunner(playbook['config'], playbook['playbook'],
-                       request.json['host'], request.json['args'])
+    if not playbook.validate_args(request.json['args']):
+        return { 'err': 'Bad or banned arguments passed.' }, 400
+
+    runner = Runner(playbook, request.json['host'], request.json['args'])
 
     _RUNNERS[runner.id] = runner
     session['runner'] = runner.id

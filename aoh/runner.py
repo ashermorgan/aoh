@@ -12,17 +12,18 @@ import ansible_runner
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 _CLIENT_TIMEOUT = 600 # 10 minutes
 
-class AoHError(Exception):
-    """Raised for AoH-specific errors."""
+class RunnerError(Exception):
+    """Raised for AoH runner errors."""
 
 
-class AoHRunner:
+class Runner:
     """An Ansible-over-HTTP playbook runner."""
 
-    def __init__(self, config, playbook, host, args):
+    def __init__(self, playbook, host, args):
         """Create a new AoH runner."""
 
         self.id = str(uuid4()) # Runner ID (set to None after teardown)
+        self.playbook = playbook
 
         self._lock = Lock() # Used to protect all public methods
 
@@ -44,7 +45,7 @@ class AoHRunner:
             with open(f'{self._DIR}/hostname', 'w') as f:
                 f.write(f'{host}\n')
 
-            self._start_runner(config, playbook, host, args)
+            self._start_runner(host, args)
 
             # We assume that ansible-runner will eventually create its log file
             while not os.path.exists(self._LOGS_PATH):
@@ -65,7 +66,7 @@ class AoHRunner:
             raise
 
 
-    def _start_runner(self, config, playbook, host, args):
+    def _start_runner(self, host, args):
         """Configure and start the underlying ansible-runner."""
 
         # Set ansible_connection=aoh for the client host only. Note that we
@@ -76,7 +77,7 @@ class AoHRunner:
 
         raw_config = ansible_runner.get_ansible_config(
             'dump',
-            config,
+            self.playbook.config,
             private_data_dir=self._DIR,
             quiet=True,
         )[0]
@@ -94,7 +95,7 @@ class AoHRunner:
             'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
                 [_CONNECTION_PLUGIN_DIR] + connection_plugins
             ),
-            'ANSIBLE_CONFIG': config,
+            'ANSIBLE_CONFIG': self.playbook.config,
             'ANSIBLE_INVENTORY': ','.join(
                 [f'{self._DIR}/inventory.ini'] + inventory
             ),
@@ -102,16 +103,16 @@ class AoHRunner:
         vars = {
             'ansible_aoh_dir': self._DIR,
         }
+        cmdline = ' '.join(shlex.quote(arg) for arg in args)
+        cmdline += ' ' + self.playbook.cmdline
 
         self._thread, self._runner = ansible_runner.run_async(
             private_data_dir=self._DIR,
             ident=self.id,
             envvars=env,
             extravars=vars,
-            cmdline=' '.join(shlex.quote(arg) for arg in args),
-
-            playbook=playbook,
-
+            cmdline=cmdline,
+            playbook=self.playbook.playbook,
             quiet=True,
             suppress_env_files=True,
         )
@@ -148,8 +149,9 @@ class AoHRunner:
             # We check runner status first, in case new logs come in afterwards
             res['finished'] = self._runner_finished()
 
-            assert self._logs is not None
-            res['logs'] = self._logs.read()
+            if self.playbook.output:
+                assert self._logs is not None
+                res['logs'] = self._logs.read()
 
             if req and self._recvbuf:
                 try:
@@ -204,6 +206,6 @@ class AoHRunner:
                 # broken recvbuf pipe or the sendbuf error.
                 self._thread.join(10)
                 if self._thread.is_alive():
-                    raise AoHError('Ansible runner thread not terminated')
+                    raise RunnerError('Ansible runner thread not terminated')
 
             shutil.rmtree(self._DIR)
