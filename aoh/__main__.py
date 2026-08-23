@@ -1,7 +1,3 @@
-from dotenv import load_dotenv
+from . import create_app
 
-from .server import app, scheduler
-
-load_dotenv()
-scheduler.start()
-app.run(debug=True)
+create_app().run(debug=True)

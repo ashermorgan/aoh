@@ -1,5 +1,7 @@
 ansible
 ansible_runner
 flask
+flask-apscheduler
+gunicorn
 python-dotenv
 pyyaml
