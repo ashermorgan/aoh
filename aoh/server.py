@@ -58,7 +58,7 @@ def new_runner():
     _RUNNERS[runner.id] = runner
     session['runner'] = runner.id
 
-    return make_response('', 201, {'Location': f'/runners/{runner.id}'})
+    return make_response({}, 201, {'Location': f'/runners/{runner.id}'})
 
 
 @app.put('/runners/<id>')

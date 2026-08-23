@@ -2,13 +2,14 @@
 
 import base64
 import getpass
+import json
 import os
 import platform
 import subprocess
 import sys
 import time
-
-import requests  # TODO: eliminate dependency?
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 API = '{{ API_URL }}' # Substitution performed by Flask
 
@@ -63,12 +64,44 @@ def fetch(args):
     except Exception as e:  # noqa: BLE001
         return { 'err': str(e) }
 
+
+def send_json_request(url, req_data=None, method='GET', cookies=''):
+    """Send an HTTP request, expecting JSON to be used for all content."""
+
+    req = Request(
+        url,
+        method=method,
+        data=json.dumps(req_data).encode() if req_data is not None else None,
+        headers={
+            'Content-Type': 'application/json',
+            'Cookie': cookies,
+        },
+    )
+
+    try:
+        with urlopen(req) as res:
+            status_code = res.status
+            headers = res.headers
+            data = res.read()
+    except HTTPError as e:
+        status_code = e.code
+        headers = e.headers
+        data = e.fp.read()
+
+    # We assume that all responses will include JSON bodies
+    assert headers.get('Content-Type') == 'application/json'
+
+    return status_code, headers, json.loads(data)
+
+
 def runner_loop(runner_url, cookies):
     """Main execution loop."""
 
     req = {}
     while True:
-        res = requests.put(runner_url, cookies=cookies, json=req).json()
+        status, _, res = send_json_request(runner_url, req, 'PUT', cookies)
+
+        assert status == 200
 
         if 'logs' in res:
             print(res['logs'], end='')
@@ -92,25 +125,31 @@ def runner_loop(runner_url, cookies):
 def create_runner(playbook, args):
     """Main execution loop."""
 
+    url = f'{API}/runners/'
+
     req = {
         'host': platform.node() or 'aoh_node',
         'playbook': playbook,
         'args': args,
     }
-    res = requests.post(f'{API}/runners/', json=req)
 
-    if res.status_code == 401 and 'passwords' in res.json():
+    status, headers, res = send_json_request(url, req, 'POST')
+
+    if status == 401 and 'passwords' in res:
         req['passwords'] = {}
-        for pw_type in res.json()['passwords']:
+        for pw_type in res['passwords']:
             req['passwords'][pw_type] = \
                     getpass.getpass(PASSWORD_PROMPTS[pw_type])
-        res = requests.post(f'{API}/runners/', json=req)
+        status, headers, res = send_json_request(url, req, 'POST')
 
-    if res.status_code != 201:
-        print(res.json()['err'])
+    if status != 201:
+        print(res['err'])
         sys.exit(1)
 
-    runner_loop(f'{API}{res.headers['Location']}', res.cookies)
+    # We assume that only one cookie will be set
+    session_token = headers['Set-Cookie'].split(';')[0]
+
+    runner_loop(f'{API}{headers['Location']}', session_token)
 
 
 def cli(args):

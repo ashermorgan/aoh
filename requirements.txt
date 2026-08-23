@@ -2,4 +2,3 @@ ansible
 ansible_runner
 flask
 pyyaml
-requests
