@@ -19,7 +19,6 @@ _CLI_OPT_WHITELIST = [
     '--list-tags',
     '--skip-tags',
     '--start-at-task',
-    '--step',
     '--tags', '-t',
     '--verbose', '-v',
     '--version',
