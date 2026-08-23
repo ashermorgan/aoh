@@ -28,7 +28,6 @@ _CLI_OPT_WHITELIST = [
 _CLI_OPT_BLACKLIST = [
     # These options are not supported at all by AoH
     '--step',               # Interactive
-    '-c', '--connection,',  # Conflicts with ansible_connection=aoh
 ]
 
 _CLI_PASSWORD_OPTS = {
