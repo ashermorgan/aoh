@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import base64
+import getpass
 import os
 import platform
 import subprocess
@@ -10,6 +11,12 @@ import time
 import requests  # TODO: eliminate dependency?
 
 API = '{{ API_URL }}' # Substitution performed by Flask
+
+PASSWORD_PROMPTS = {
+    'vault_password': 'Vault password: ',
+    'become_password': 'BECOME password: ',
+    'connection_password': 'SSH password: ',
+}
 
 
 def exec(args):
@@ -56,21 +63,8 @@ def fetch(args):
     except Exception as e:  # noqa: BLE001
         return { 'err': str(e) }
 
-
-def main(playbook, args):
+def runner_loop(runner_url, cookies):
     """Main execution loop."""
-
-    res = requests.post(f'{API}/runners/', json={
-        'host': platform.node() or 'aoh_node',
-        'playbook': playbook,
-        'args': args,
-    })
-    if res.status_code != 201:
-        print(res.json()['err'])
-        sys.exit(1)
-
-    cookies = res.cookies
-    runner_url = f'{API}{res.headers['Location']}'
 
     req = {}
     while True:
@@ -93,6 +87,30 @@ def main(playbook, args):
             req = fetch(res['fetch'])
         else:
             time.sleep(0.1)
+
+
+def create_runner(playbook, args):
+    """Main execution loop."""
+
+    req = {
+        'host': platform.node() or 'aoh_node',
+        'playbook': playbook,
+        'args': args,
+    }
+    res = requests.post(f'{API}/runners/', json=req)
+
+    if res.status_code == 401 and 'passwords' in res.json():
+        req['passwords'] = {}
+        for pw_type in res.json()['passwords']:
+            req['passwords'][pw_type] = \
+                    getpass.getpass(PASSWORD_PROMPTS[pw_type])
+        res = requests.post(f'{API}/runners/', json=req)
+
+    if res.status_code != 201:
+        print(res.json()['err'])
+        sys.exit(1)
+
+    runner_loop(f'{API}{res.headers['Location']}', res.cookies)
 
 
 def cli(args):
@@ -127,7 +145,7 @@ def cli(args):
         playbook = 'main'
         aoh_args = args[1:]
 
-    main(playbook, aoh_args)
+    create_runner(playbook, aoh_args)
 
 
 if __name__ == '__main__':

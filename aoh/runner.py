@@ -11,6 +11,11 @@ import ansible_runner
 
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 _CLIENT_TIMEOUT = 600 # 10 minutes
+_PASSWORD_PROMPTS = {
+    'become_password': '^BECOME password.*:\\s*?$',
+    'connect_password': '^SSH password:\\s*?$',
+    'vault_password': '^Vault password:\\s*?$',
+}
 
 class RunnerError(Exception):
     """Raised for AoH runner errors."""
@@ -19,7 +24,7 @@ class RunnerError(Exception):
 class Runner:
     """An Ansible-over-HTTP playbook runner."""
 
-    def __init__(self, playbook, host, args):
+    def __init__(self, playbook, host, args, passwords):
         """Create a new AoH runner."""
 
         self.id = str(uuid4()) # Runner ID (set to None after teardown)
@@ -45,7 +50,7 @@ class Runner:
             with open(f'{self._DIR}/hostname', 'w') as f:
                 f.write(f'{host}\n')
 
-            self._start_runner(host, args)
+            self._start_runner(host, args, passwords)
 
             # We assume that ansible-runner will eventually create its log file
             while not os.path.exists(self._LOGS_PATH):
@@ -66,7 +71,7 @@ class Runner:
             raise
 
 
-    def _start_runner(self, host, args):
+    def _start_runner(self, host, args, passwords):
         """Configure and start the underlying ansible-runner."""
 
         # Set ansible_connection=aoh for the client host only. Note that we
@@ -103,6 +108,9 @@ class Runner:
         vars = {
             'ansible_aoh_dir': self._DIR,
         }
+        pw_prompt_answers = {}
+        for pw_type in passwords:
+            pw_prompt_answers[_PASSWORD_PROMPTS[pw_type]] = passwords[pw_type]
         cmdline = ' '.join(shlex.quote(arg) for arg in args)
         cmdline += ' ' + self.playbook.cmdline
 
@@ -112,6 +120,7 @@ class Runner:
             envvars=env,
             extravars=vars,
             cmdline=cmdline,
+            passwords=pw_prompt_answers,
             playbook=self.playbook.playbook,
             quiet=True,
             suppress_env_files=True,

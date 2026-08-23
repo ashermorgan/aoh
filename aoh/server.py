@@ -42,7 +42,18 @@ def new_runner():
     if not playbook.validate_args(request.json['args']):
         return { 'err': 'Bad or banned arguments passed.' }, 400
 
-    runner = Runner(playbook, request.json['host'], request.json['args'])
+    exp_pw_types = playbook.get_required_passwords(request.json['args'])
+    act_pws = request.json.get('passwords', {})
+    missing_pw_types = [pw_type for pw_type in exp_pw_types if pw_type not in
+                        act_pws]
+    if missing_pw_types:
+        return {
+            'err': f"Missing required passwords: {', '.join(missing_pw_types)}",
+            'passwords': exp_pw_types,
+        }, 401
+
+    runner = Runner(playbook, request.json['host'], request.json['args'],
+                    act_pws)
 
     _RUNNERS[runner.id] = runner
     session['runner'] = runner.id

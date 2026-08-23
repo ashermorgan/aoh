@@ -1,9 +1,15 @@
+import tempfile
+
+import ansible_runner
 import yaml
 
 CONFIG_FILE = 'config.yml' # TODO: make configurable
 
-DEFAULT_OPT_WHITELIST = [
+_CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke
+    '--ask-become-pass', '-K',
+    '--ask-pass', '-k',
+    '--ask-vault-password', '--ask-vault-pass', '-J',
     '--check', '-C',
     '--diff', '-D',
     '--extra-vars', '-e',
@@ -18,14 +24,46 @@ DEFAULT_OPT_WHITELIST = [
     '--version',
 ]
 
-OPT_BLACKLIST = [
-    # These options are not supported at all because they are interactive
-    '--step',
-    '-J', '--ask-vault-password', '--ask-vault-pass',
-    '-K', '--ask-become-pass',
-    '-c', '--connection,',
-    '-k', '--ask-pass',
+_CLI_OPT_BLACKLIST = [
+    # These options are not supported at all by AoH
+    '--step',               # Interactive
+    '-c', '--connection,',  # Conflicts with ansible_connection=aoh
 ]
+
+_CLI_PASSWORD_OPTS = {
+    # These command line flags require us to prompt the user for a password
+    '--ask-become-pass': 'become_password',
+    '--ask-pass': 'connection_password',
+    '--ask-vault-pass': 'vault_password',
+    '--ask-vault-password': 'vault_password',
+    '-J': 'vault_password',
+    '-K': 'become_password',
+    '-k': 'connection_password',
+}
+
+_CONFIG_PASSWORD_OPTS = {
+    # These config options require us to prompt the user for a password
+    'DEFAULT_ASK_PASS': 'connection_password',
+    'DEFAULT_ASK_VAULT_PASS': 'vault_password',
+    'DEFAULT_BECOME_ASK_PASS': 'become_password',
+}
+
+
+def _get_opts(args):
+    """Identify options present in a list of CLI arguments."""
+
+    opts = []
+
+    for arg in args:
+        if arg == '--':
+            break
+        elif arg.startswith('--'):
+            opts += [arg.split('=')[0]]
+        elif arg.startswith('-'):
+            for opt in arg.split('=')[0][1:]:
+                opts += ['-' + opt]
+
+    return opts
 
 
 class PlaybookError(Exception):
@@ -69,20 +107,41 @@ class Playbook:
         if not self.jinja and ('{{' in cmdline or '{%' in cmdline):
             return False
 
-        opts = []
-        for arg in args:
-            if arg.startswith('--'):
-                opts += [arg.split('=')[0]]
-            elif arg.startswith('-'):
-                for opt in arg.split('=')[0][1:]:
-                    opts += ['-' + opt]
-
-        for opt in opts:
-            if (not (opt in DEFAULT_OPT_WHITELIST or opt in self.allow_opts) or
-                    (opt in OPT_BLACKLIST or opt in self.block_opts)):
+        for opt in _get_opts(args):
+            if (not (opt in _CLI_OPT_WHITELIST or opt in self.allow_opts) or
+                    (opt in _CLI_OPT_BLACKLIST or opt in self.block_opts)):
                 return False
 
         return True
+
+
+    def get_required_passwords(self, args):
+        """Determine what passwords the user must be prompted for."""
+
+        pw_types = set()
+
+        opts = _get_opts(args)
+        for opt, pw_type in _CLI_PASSWORD_OPTS.items():
+            if opt in opts:
+                pw_types.add(pw_type)
+
+        with tempfile.TemporaryDirectory(prefix='aoh-') as dir:
+            raw_config = ansible_runner.get_ansible_config(
+                'dump',
+                self.config,
+                private_data_dir=dir,
+                quiet=True,
+            )[0]
+
+            for opt, pw_type in _CONFIG_PASSWORD_OPTS.items():
+                val = eval(next(
+                    x for x in raw_config.split('\n')
+                    if x.startswith(opt)
+                ).split('= ')[1])
+                if val:
+                    pw_types.add(pw_type)
+
+        return list(pw_types)
 
 
 def get_playbook(playbook):
