@@ -14,9 +14,9 @@ from urllib.request import Request, urlopen
 API = '{{ API_URL }}' # Substitution performed by Flask
 
 PASSWORD_PROMPTS = {
-    'vault_password': 'Vault password: ',
-    'become_password': 'BECOME password: ',
     'connection_password': 'SSH password: ',
+    'become_password': 'BECOME password: ',
+    'vault_password': 'Vault password: ',
 }
 
 
@@ -104,7 +104,13 @@ def runner_loop(runner_url, cookies):
         assert status == 200
 
         if 'logs' in res:
-            print(res['logs'], end='')
+            # Strip duplicate password prompts
+            logs = res['logs']
+            while any(logs.startswith(prompt[:-2]) for prompt in
+                      PASSWORD_PROMPTS.values()):
+                logs = logs.split('\n', 1)[1]
+
+            print(logs, end='')
 
         req = {}
         if 'err' in res:

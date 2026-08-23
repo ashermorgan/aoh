@@ -13,7 +13,7 @@ _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 _CLIENT_TIMEOUT = 600 # 10 minutes
 _PASSWORD_PROMPTS = {
     'become_password': '^BECOME password.*:\\s*?$',
-    'connect_password': '^SSH password:\\s*?$',
+    'connection_password': '^SSH password:\\s*?$',
     'vault_password': '^Vault password:\\s*?$',
 }
 
