@@ -4,7 +4,8 @@ import tempfile
 import ansible_runner
 import yaml
 
-CONFIG_FILE = 'config.yml' # TODO: make configurable
+PLAYBOOKS_FILE = os.getenv('AOH_PLAYBOOKS_FILE', 'playbooks.yml')
+PLAYBOOKS_DIR = os.getenv('AOH_PLAYBOOKS_DIR', os.path.dirname(PLAYBOOKS_FILE))
 
 _CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke
@@ -95,9 +96,8 @@ class Playbook:
         self.allow_opts = dict.get('allow_opts', [])
         self.block_opts = dict.get('block_opts', [])
 
-        # TODO: allow a default playbook dir to be specified?
-        self.path = os.path.abspath(self.path)
-        self.config = os.path.abspath(self.config)
+        self.path = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.path))
+        self.config = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.config))
 
 
     def validate_args(self, args):
@@ -147,7 +147,7 @@ class Playbook:
 def get_playbook(name):
     """Lookup a playbook configuration."""
 
-    with open(CONFIG_FILE, 'r') as f:
+    with open(PLAYBOOKS_FILE, 'r') as f:
         CONFIG = yaml.safe_load(f)
         if name in CONFIG:
             return Playbook(name, CONFIG[name])
