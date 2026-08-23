@@ -174,7 +174,7 @@ def cli(args):
         print()
         print('Arguments: ')
         print('  playbook          The name of the playbook to run (defaults '
-              'to "main")')
+              'to "main.yml")')
         print()
         print('Options: ')
         print('  -h, --help        Show this help message and exit')
@@ -187,7 +187,7 @@ def cli(args):
         playbook = args[1]
         aoh_args = args[2:]
     else:
-        playbook = 'main'
+        playbook = 'main.yml'
         aoh_args = args[1:]
 
     create_runner(playbook, aoh_args)

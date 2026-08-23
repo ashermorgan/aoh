@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 import ansible_runner
@@ -71,11 +72,11 @@ class PlaybookError(Exception):
 
 
 class Playbook:
-    def __init__(self, dict):
+    def __init__(self, name, dict):
         """Parse a playbook configuration from a dictionary."""
 
         _types = {
-            'playbook': str,
+            'path': str,
             'config': str,
             'cmdline': str,
             'output': bool,
@@ -84,20 +85,21 @@ class Playbook:
             'block_opts': list,
         }
 
-        if 'playbook' not in dict:
-            raise PlaybookError('"playbook" field missing')
-
         for key, _type in _types.items():
             if key in dict and type(dict[key]) != _type:
                 raise PlaybookError(f'"{key}" field must be of type {_type}')
 
-        self.playbook = dict['playbook']
+        self.path = dict.get('path', name)
         self.config = dict.get('config', None)
         self.cmdline = dict.get('cmdline', '')
         self.output = dict.get('output', True)
         self.jinja = dict.get('jinja', False)
         self.allow_opts = dict.get('allow_opts', [])
         self.block_opts = dict.get('block_opts', [])
+
+        # TODO: allow a default playbook dir to be specified?
+        self.path = os.path.abspath(self.path)
+        self.config = os.path.abspath(self.config)
 
 
     def validate_args(self, args):
@@ -144,12 +146,12 @@ class Playbook:
         return list(pw_types)
 
 
-def get_playbook(playbook):
+def get_playbook(name):
     """Lookup a playbook configuration."""
 
     with open(CONFIG_FILE, 'r') as f:
         CONFIG = yaml.safe_load(f)
-        if playbook in CONFIG:
-            return Playbook(CONFIG[playbook])
+        if name in CONFIG:
+            return Playbook(name, CONFIG[name])
         else:
             return None

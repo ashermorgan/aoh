@@ -121,7 +121,7 @@ class Runner:
             extravars=vars,
             cmdline=cmdline,
             passwords=pw_prompt_answers,
-            playbook=self.playbook.playbook,
+            playbook=self.playbook.path,
             quiet=True,
             suppress_env_files=True,
         )
