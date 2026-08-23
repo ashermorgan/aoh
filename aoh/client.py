@@ -155,7 +155,7 @@ def create_runner(playbook, args):
     # We assume that only one cookie will be set
     session_token = headers['Set-Cookie'].split(';')[0]
 
-    runner_loop(f'{API}{headers['Location']}', session_token)
+    runner_loop(f"{API}{headers['Location']}", session_token)
 
 
 def cli(args):
