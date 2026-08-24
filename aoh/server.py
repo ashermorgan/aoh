@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, abort, make_response, render_template, request, session
+from flask import Flask, make_response, render_template, request, session
 from flask_apscheduler import APScheduler
 
 from .playbook import get_playbook
@@ -64,11 +64,15 @@ def new_runner():
 @app.put('/runners/<id>')
 def runner_update(id):
     if id != session.get('runner'):
-        abort(401)
+        return make_response({
+            'err': 'Invalid runner ID',
+        }, 401)
 
     runner = _RUNNERS.get(id)
     if not runner:
-        abort(400)
+        return make_response({
+            'err': 'Runner not found',
+        }, 404)
 
     res = runner.process_client_request(request.json)
 

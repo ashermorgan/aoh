@@ -20,6 +20,10 @@ PASSWORD_PROMPTS = {
 }
 
 
+class ClientError(Exception):
+    """Raised for miscellaneous client errors."""
+
+
 def exec(args):
     """Run a command on the local host."""
 
@@ -88,8 +92,12 @@ def send_json_request(url, req_data=None, method='GET', cookies=''):
         headers = e.headers
         data = e.fp.read()
 
-    # We assume that all responses will include JSON bodies
-    assert headers.get('Content-Type') == 'application/json'
+    if headers.get('Content-Type') != 'application/json':
+        if status_code >= 400:
+            raise ClientError(f'Server responded with {status_code}')
+        else:
+            raise ClientError('Server responded with unexpected content type: '
+                              f"{headers.get('Content-Type')}")
 
     return status_code, headers, json.loads(data)
 
@@ -98,10 +106,9 @@ def runner_loop(runner_url, cookies):
     """Main execution loop."""
 
     req = {}
+
     while True:
         status, _, res = send_json_request(runner_url, req, 'PUT', cookies)
-
-        assert status == 200
 
         if 'logs' in res:
             # Strip duplicate password prompts
@@ -112,19 +119,22 @@ def runner_loop(runner_url, cookies):
 
             print(logs, end='')
 
-        req = {}
         if 'err' in res:
-            print(res['err'])
-            sys.exit(1)
+            raise ClientError(res['err'])
+        elif status != 200:
+            raise ClientError(f'Server responded with {status}')
+
         if res.get('finished'):
-            break
-        elif 'exec' in res:
+            return
+
+        if 'exec' in res:
             req = exec(res['exec'])
         elif 'put' in res:
             req = put(res['put'])
         elif 'fetch' in res:
             req = fetch(res['fetch'])
         else:
+            req = {}
             time.sleep(0.1)
 
 
@@ -148,9 +158,10 @@ def create_runner(playbook, args):
                     getpass.getpass(PASSWORD_PROMPTS[pw_type])
         status, headers, res = send_json_request(url, req, 'POST')
 
-    if status != 201:
-        print(res['err'])
-        sys.exit(1)
+    if 'err' in res:
+        raise ClientError(res['err'])
+    elif status != 201:
+        raise ClientError(f'Server responded with {status}')
 
     # We assume that only one cookie will be set
     session_token = headers['Set-Cookie'].split(';')[0]
@@ -190,7 +201,11 @@ def cli(args):
         playbook = 'main.yml'
         aoh_args = args[1:]
 
-    create_runner(playbook, aoh_args)
+    try:
+        create_runner(playbook, aoh_args)
+    except ClientError as e:
+        print(f'Error: {e}')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
