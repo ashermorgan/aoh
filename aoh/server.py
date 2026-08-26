@@ -30,7 +30,8 @@ def gc():
 @app.get('/run')
 @app.get('/run.py')
 def install():
-    return render_template('client.py', API_URL=request.host_url[:-1])
+    api_url = os.getenv('AOH_ORIGIN', request.host_url[:-1])
+    return render_template('client.py', API_URL=api_url)
 
 
 @app.post('/runners/')
