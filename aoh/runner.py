@@ -192,8 +192,8 @@ class Runner:
 
             if self._recvbuf:
                 try:
-                    # Send an error in case the AoH connection plugin is currently
-                    # blocking on a read
+                    # Send an error in case the AoH connection plugin is
+                    # currently blocking on a read
                     self._recvbuf.write('{"err":"Runner teardown"}\n')
                     self._recvbuf.flush()
                 except BrokenPipeError:
@@ -211,8 +211,8 @@ class Runner:
                     pass
 
             if self._thread:
-                # The Ansible runner *should* exit if it hasn't already due to a
-                # broken recvbuf pipe or the sendbuf error.
+                # The Ansible runner *should* exit if it hasn't already due to
+                # a broken recvbuf pipe or the sendbuf error.
                 self._thread.join(10)
                 if self._thread.is_alive():
                     raise RunnerError('Ansible runner thread not terminated')

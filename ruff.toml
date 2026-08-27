@@ -1,0 +1,6 @@
+line-length = 80
+
+[lint]
+extend-select = [
+    "E501", # line-too-long
+]

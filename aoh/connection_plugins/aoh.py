@@ -33,7 +33,11 @@ import os
 import select
 import typing as t
 
-from ansible.errors import AnsibleConnectionFailure, AnsibleError, AnsibleFileNotFound
+from ansible.errors import (
+    AnsibleConnectionFailure,
+    AnsibleError,
+    AnsibleFileNotFound,
+)
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.display import Display
 
@@ -137,7 +141,7 @@ class Connection(ConnectionBase):
         assert self.recvpoll is not None
 
         if not os.path.exists(in_path):
-            raise AnsibleFileNotFound(f'file or module does not exist: {in_path}')
+            raise AnsibleFileNotFound(f'File does not exist: {in_path}')
         with open(in_path, 'rb') as f:
             data = base64.b64encode(f.read()).decode()
 
