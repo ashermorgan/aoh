@@ -10,7 +10,7 @@ from uuid import uuid4
 import ansible_runner
 
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
-_CLIENT_TIMEOUT = 600 # 10 minutes
+_CLIENT_TIMEOUT = 600 # 10 minutes. TODO: update based on aoh timeout?
 _PASSWORD_PROMPTS = {
     'become_password': '^BECOME password.*:\\s*?$',
     'connection_password': '^SSH password:\\s*?$',

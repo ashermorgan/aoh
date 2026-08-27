@@ -8,17 +8,32 @@ DOCUMENTATION = """
     options:
         aoh_dir:
             description: The AoH runner directory
+            type: string
             required: true
             vars:
                 - name: ansible_aoh_dir
+        aoh_timeout:
+            description: The timeout for AoH responses, in seconds
+            type: integer
+            default: 300
+            env:
+                - name: ANSIBLE_TIMEOUT
+            ini:
+                - key: timeout
+                  section: defaults
+            vars:
+                - name: ansible_aoh_timeout
+            cli:
+                - name: timeout
 """
 
 import base64
 import json
 import os
+import select
 import typing as t
 
-from ansible.errors import AnsibleError, AnsibleFileNotFound
+from ansible.errors import AnsibleConnectionFailure, AnsibleError, AnsibleFileNotFound
 from ansible.plugins.connection import ConnectionBase
 from ansible.utils.display import Display
 
@@ -37,6 +52,8 @@ class Connection(ConnectionBase):
 
         self.sendbuf = None
         self.recvbuf = None
+        self.recvpoll = None
+        self.timeout = self.get_option('aoh_timeout')
 
 
     def _connect(self) -> Connection:  # noqa: F821
@@ -66,6 +83,9 @@ class Connection(ConnectionBase):
             self.recvbuf = open(RECVBUF_PATH, 'r')  # noqa: SIM115
             self.sendbuf = open(SENDBUF_PATH, 'w')  # noqa: SIM115
 
+            self.recvpoll = select.poll()
+            self.recvpoll.register(self.recvbuf, select.POLLIN)
+
             self._connected = True
 
         return self
@@ -81,6 +101,7 @@ class Connection(ConnectionBase):
 
         assert self.sendbuf is not None
         assert self.recvbuf is not None
+        assert self.recvpoll is not None
         assert isinstance(cmd, str)
         assert in_data is None
         # assert sudoable is False
@@ -90,7 +111,10 @@ class Connection(ConnectionBase):
         }) + '\n')
         self.sendbuf.flush()
 
+        if not self.recvpoll.poll(self.timeout * 1000):
+            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
         res = json.loads(self.recvbuf.readline())
+
         if 'err' in res:
             raise AnsibleError(res['err'])
         return (
@@ -110,6 +134,7 @@ class Connection(ConnectionBase):
 
         assert self.sendbuf is not None
         assert self.recvbuf is not None
+        assert self.recvpoll is not None
 
         if not os.path.exists(in_path):
             raise AnsibleFileNotFound(f'file or module does not exist: {in_path}')
@@ -124,7 +149,10 @@ class Connection(ConnectionBase):
         }) + '\n')
         self.sendbuf.flush()
 
+        if not self.recvpoll.poll(self.timeout * 1000):
+            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
         res = json.loads(self.recvbuf.readline())
+
         if 'err' in res:
             raise AnsibleError(res['err'])
 
@@ -139,13 +167,17 @@ class Connection(ConnectionBase):
 
         assert self.sendbuf is not None
         assert self.recvbuf is not None
+        assert self.recvpoll is not None
 
         self.sendbuf.write(json.dumps({
             'fetch': in_path,
         }) + '\n')
         self.sendbuf.flush()
 
+        if not self.recvpoll.poll(self.timeout * 1000):
+            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
         res = json.loads(self.recvbuf.readline())
+
         if 'err' in res:
             raise AnsibleError(res['err'])
         with open(out_path, 'rb') as f:
