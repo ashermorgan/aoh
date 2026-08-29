@@ -56,16 +56,6 @@ class Runner:
             while not os.path.exists(self._LOGS_PATH):
                 time.sleep(0.1)
             self._logs = open(self._LOGS_PATH, 'r')  # noqa: SIM115
-
-            # The FIFO buffers may not get created if Ansible crashes/exits
-            # before calling the AoH connection plugin
-            while not os.path.exists(self._SENDBUF_PATH) and \
-                    not self._runner_finished():
-                time.sleep(0.1)
-            if os.path.exists(self._RECVBUF_PATH):
-                # Note that recvbuf is created first, so sendbuf will exist too
-                self._recvbuf = open(self._RECVBUF_PATH, 'w')  # noqa: SIM115
-                self._sendbuf = open(self._SENDBUF_PATH, 'r')  # noqa: SIM115
         except:
             self.teardown()
             raise
@@ -162,6 +152,8 @@ class Runner:
                 assert self._logs is not None
                 res['logs'] = self._logs.read()
 
+            if not self._recvbuf and os.path.exists(self._RECVBUF_PATH):
+                self._recvbuf = open(self._RECVBUF_PATH, 'w')  # noqa: SIM115
             if req and self._recvbuf:
                 try:
                     self._recvbuf.write(json.dumps(req) + '\n')
@@ -170,6 +162,8 @@ class Runner:
                     # Ansible should exit soon on its own
                     pass
 
+            if not self._sendbuf and os.path.exists(self._SENDBUF_PATH):
+                self._sendbuf = open(self._SENDBUF_PATH, 'r')  # noqa: SIM115
             if self._sendbuf:
                 line = self._sendbuf.readline()
                 for key, val in json.loads(line or '{}').items():
