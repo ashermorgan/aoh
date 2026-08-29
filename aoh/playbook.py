@@ -18,6 +18,8 @@ class Playbook:
         _types = {
             'path': str,
             'config': str,
+            'host': str,
+            'groups': list,
             'password': bool,
             'cmdline': str,
             'output': bool,
@@ -33,6 +35,8 @@ class Playbook:
         self.name = name
         self.path = dict.get('path', name)
         self.config = dict.get('config', None)
+        self.host = dict.get('host')
+        self.groups = dict.get('groups', [])
         self.password = dict.get('password', False)
         self.cmdline = dict.get('cmdline', '')
         self.output = dict.get('output', True)

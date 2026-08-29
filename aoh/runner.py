@@ -29,6 +29,7 @@ class Runner:
 
         self.id = str(uuid4()) # Runner ID (set to None after teardown)
         self.playbook = playbook
+        self.host = self.playbook.host or host or 'aoh_node'
 
         self._lock = Lock() # Used to protect all public methods
 
@@ -48,9 +49,9 @@ class Runner:
         try:
             # Create hostname file so connection plugin can verify hosts
             with open(f'{self._DIR}/hostname', 'w') as f:
-                f.write(f'{host}\n')
+                f.write(f'{self.host}\n')
 
-            self._start_runner(host, args, passwords)
+            self._start_runner(args, passwords)
 
             # We assume that ansible-runner will eventually create its log file
             while not os.path.exists(self._LOGS_PATH):
@@ -61,14 +62,15 @@ class Runner:
             raise
 
 
-    def _start_runner(self, host, args, passwords):
+    def _start_runner(self, args, passwords):
         """Configure and start the underlying ansible-runner."""
 
         # Set ansible_connection=aoh for the client host only. Note that we
         # don't use ansible-runner's inventory directory because that will
         # shadow user inventory files.
         with open(f'{self._DIR}/inventory.ini', 'w') as f:
-            f.write(f'[aoh]\n{host} ansible_connection=aoh')
+            f.write(f'[aoh]\n{self.host} ansible_connection=aoh\n')
+            f.writelines(f'[{g}]\n{self.host}\n' for g in self.playbook.groups)
 
         raw_config = ansible_runner.get_ansible_config(
             'dump',

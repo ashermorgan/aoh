@@ -145,7 +145,7 @@ def create_runner(playbook, args):
     url = f'{API}/runners/'
 
     req = {
-        'host': platform.node() or 'aoh_node',
+        'host': platform.node(),
         'playbook': playbook,
         'args': args,
     }
