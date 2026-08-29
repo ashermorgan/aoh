@@ -5,3 +5,4 @@ flask-apscheduler
 gunicorn
 python-dotenv
 pyyaml
+bcrypt

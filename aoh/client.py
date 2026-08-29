@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 API = '{{ API_URL }}' # Substitution performed by Flask
 
 PASSWORD_PROMPTS = {
+    'aoh_password': 'AoH password: ',
     'connection_password': 'SSH password: ',
     'become_password': 'BECOME password: ',
     'vault_password': 'Vault password: ',
