@@ -14,7 +14,6 @@ _CLI_OPT_WHITELIST = [
     '--ask-vault-password', '--ask-vault-pass', '-J',
     '--check', '-C',
     '--diff', '-D',
-    '--extra-vars', '-e',
     '--help', '-h',
     '--limit', '-l',
     '--list-tags',
