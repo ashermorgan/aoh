@@ -93,6 +93,7 @@ class Runner:
                 [_CONNECTION_PLUGIN_DIR] + connection_plugins
             ),
             'ANSIBLE_CONFIG': self.playbook.config,
+            'ANSIBLE_FORCE_COLOR': '1',
             'ANSIBLE_INVENTORY': ','.join(
                 [f'{self._DIR}/inventory.ini'] + inventory
             ),
