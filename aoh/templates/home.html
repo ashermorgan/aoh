@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        {% if description %}
+        <meta name="description" content="{{ description }}">
+        {% endif %}
+
+        <title>{{ playbook }}</title>
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+        <script src="{{ url_for('static', filename='copy.js') }}"></script>
+    </head>
+
+    <body onload="show_copy_btn()">
+        <main>
+            {% if description %}
+            <h1>{{ description }}</h1>
+            {% endif %}
+
+            {% set cmd = 'curl %s/run | python3' % API_URL %}
+            {% if playbook != 'main.yml' %}
+            {% set cmd = cmd + ' - %s' % playbook %}
+            {% endif %}
+            <div id="cmd-bar">
+                <code id="cmd">{{ cmd }}</code>
+                <button id="copy" onclick="copy('{{ cmd }}')" hidden></button>
+            </div>
+        </main>
+    </body>
+</html>

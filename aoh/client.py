@@ -11,7 +11,7 @@ import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-API = '{{ API_URL }}' # Substitution performed by Flask
+API = '{{ API_URL }}' #{# Substitution performed by Flask #}
 
 PASSWORD_PROMPTS = {
     'aoh_password': 'AoH password: ',

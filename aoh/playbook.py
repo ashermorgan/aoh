@@ -26,6 +26,7 @@ class Playbook:
             'jinja': bool,
             'allow_opts': list, # We'll just assume that elements are strings
             'block_opts': list,
+            'web_description': str,
         }
 
         for key, _type in _types.items():
@@ -43,6 +44,7 @@ class Playbook:
         self.jinja = dict.get('jinja', False)
         self.allow_opts = dict.get('allow_opts', [])
         self.block_opts = dict.get('block_opts', [])
+        self.web_description = dict.get('web_description')
 
         self.path = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.path))
         self.config = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.config))

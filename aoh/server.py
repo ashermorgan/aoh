@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request, session
+from flask import Flask, abort, render_template, request, session
 from flask_apscheduler import APScheduler
 
 from .playbook import get_playbook
@@ -10,7 +10,7 @@ from .security import *
 _RUNNERS = {}
 _GC_INTERVAL = 60 # 1 minute
 
-app = Flask(__name__, template_folder=os.path.dirname(__file__))
+app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
 scheduler = APScheduler()
@@ -28,11 +28,17 @@ def gc():
             _RUNNERS.pop(id, None)
 
 
+@app.context_processor
+def inject_stage_and_region():
+    return {
+        'API_URL': os.getenv('AOH_ORIGIN', request.host_url[:-1])
+    }
+
+
 @app.get('/run')
 @app.get('/run.py')
 def install():
-    api_url = os.getenv('AOH_ORIGIN', request.host_url[:-1])
-    return render_template('client.py', API_URL=api_url)
+    return render_template('client.py')
 
 
 @app.post('/runners/<path:path>')
@@ -88,3 +94,14 @@ def runner_update(path, short_id):
         _RUNNERS.pop(id, None)
 
     return res
+
+
+@app.get('/')
+@app.get('/<path:path>')
+def web(path='main.yml'):
+    playbook = get_playbook(path)
+    if not playbook or playbook.web_description is None:
+        return abort(404)
+
+    return render_template('home.html', description=playbook.web_description,
+                           playbook=playbook.name)
