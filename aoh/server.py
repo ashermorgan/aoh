@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, make_response, render_template, request, session
+from flask import Flask, render_template, request, session
 from flask_apscheduler import APScheduler
 
 from .playbook import get_playbook
@@ -35,11 +35,11 @@ def install():
     return render_template('client.py', API_URL=api_url)
 
 
-@app.post('/runners/')
-def new_runner():
-    playbook = get_playbook(request.json['playbook'])
+@app.post('/runners/<path:path>')
+def new_runner(path):
+    playbook = get_playbook(path)
     if not playbook:
-        return { 'err': f"Playbook not found: {request.json['playbook']}" }, 400
+        return { 'err': f"Playbook not found: {path}" }, 400
 
     if not validate_args(playbook, request.json['args']):
         return { 'err': 'Bad or banned arguments passed.' }, 400
@@ -61,24 +61,25 @@ def new_runner():
     runner = Runner(playbook, request.json['host'], request.json['args'],
                     act_pws)
 
+    assert runner.id is not None
     _RUNNERS[runner.id] = runner
     session['runner'] = runner.id
+    short_id = runner.id.split('-')[0]
 
-    return make_response({}, 201, {'Location': f'/runners/{runner.id}'})
+    return {}, 201, {'Location': f'/runners/{path}/{short_id}'}
 
 
-@app.put('/runners/<id>')
-def runner_update(id):
-    if id != session.get('runner'):
-        return make_response({
-            'err': 'Invalid runner ID',
-        }, 401)
+@app.put('/runners/<path:path>/<short_id>')
+def runner_update(path, short_id):
+    id = session.get('runner')
+    if not id or not id.startswith(short_id):
+        return { 'err': 'Invalid runner ID' }, 401
 
     runner = _RUNNERS.get(id)
     if not runner:
-        return make_response({
-            'err': 'Runner not found',
-        }, 404)
+        return { 'err': 'Runner not found' }, 404
+    if runner.playbook.name != path:
+        return { 'err': f"Playbook not found: {path}" }, 400
 
     res = runner.process_client_request(request.json)
 

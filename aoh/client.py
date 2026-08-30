@@ -142,11 +142,10 @@ def runner_loop(runner_url, cookies):
 def create_runner(playbook, args):
     """Main execution loop."""
 
-    url = f'{API}/runners/'
+    url = f'{API}/runners/{playbook}'
 
     req = {
         'host': platform.node(),
-        'playbook': playbook,
         'args': args,
     }
 
