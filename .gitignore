@@ -1,6 +1,6 @@
-.env
-playbooks.yml
-passwords.yml
-*.pyc
 __pycache__
 .venv
+
+/.env
+/passwords.yml
+/playbooks.yml

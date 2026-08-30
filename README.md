@@ -24,15 +24,23 @@ new machines, anytime, anywhere.
 | Connection direction              | Server &rarr; client | Client &rarr; server | Client &rarr; server |
 
 
-## Setup
+## Getting Started
 
-1.  Install python dependencies: `pip install -r requirements.txt`
+The AoH server is packaged as a Docker image. You can quickly try it out with
+the following commands:
 
-2.  Create `.env`, `playbooks.yml`, and `passwords.yml` files as described below
+```sh
+# Build and run the server docker image:
+docker build -t aoh .
+docker run --rm --detach --name aoh -p 8000:8000 -v ./demo:/aoh aoh
 
-3.  Start AoH development server: `python -m aoh`
+# Run the client CLI (the AoH password is "hunter2")
+curl -s 127.0.0.1:8000/run | python3
+curl -s 127.0.0.1:8000/run | python3 - --help
 
-4.  Run AoH client: `curl -s localhost:5000/run | python3 - --help`
+# Stop the server docker container
+docker stop aoh
+```
 
 
 ## Configuration
@@ -48,13 +56,15 @@ environment variables or a `.env` file.
   received.
 
 - `AOH_PASSWORDS_FILE`: The file containing passwords for password-protected
-  playbooks (see below). Defaults to `./passwords.yml`.
+  playbooks (see below). Defaults to `/aoh/passwords.yml` when running the
+  Docker image and `./passwords.yml` otherwise.
 
 - `AOH_PLAYBOOKS_DIR`: The default directory to search for playbooks in.
   Defaults to the directory containing `AOH_PLAYBOOKS_FILE`.
 
 - `AOH_PLAYBOOKS_FILE`: The file containing playbook configuration (see below).
-  Defaults to `./playbooks.yml`.
+  Defaults to `/aoh/playbooks.yml` when running the Docker image and
+  `./playbooks.yml` otherwise.
 
 
 ### Playbooks
@@ -62,15 +72,17 @@ environment variables or a `.env` file.
 AoH only executes playbooks that are listed in the `$AOH_PLAYBOOKS_FILE` file,
 which must have the following structure:
 
+<!-- EXAMPLE COPIED FROM demo/playbooks.yml: -->
+
 ```yml
 main.yml: # The playbook name
 
   # The path to the playbook, relative to $AOH_PLAYBOOKS_DIR. Defaults to the
   # playbook name.
-  path: demo/playbook.yml
+  path: playbooks/playbook.yml
 
   # The path to an associated Ansible config file, if one exists.
-  config: demo/ansible.cfg
+  config: playbooks/ansible.cfg
 
   # The hostname to assign to clients. If omitted or null, each client is
   # assigned the hostname that it reports for itself.
@@ -119,6 +131,8 @@ main.yml: # The playbook name
 
 Passwords for password-protected playbooks must be specified as bcrypt hashes in
 the `$AOH_PASSWORDS_FILE` file. For example:
+
+<!-- EXAMPLE COPIED FROM demo/passwords.yml: -->
 
 ```
 # Require the password "hunter2" to execute the main.yml playbook
