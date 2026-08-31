@@ -130,10 +130,13 @@ def runner_loop(runner_url, cookies):
 
         if 'exec' in res:
             req = exec(res['exec'])
+            req['id'] = res['id']
         elif 'put' in res:
             req = put(res['put'])
+            req['id'] = res['id']
         elif 'fetch' in res:
             req = fetch(res['fetch'])
+            req['id'] = res['id']
         else:
             req = {}
             time.sleep(0.1)

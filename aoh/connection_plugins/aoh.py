@@ -28,10 +28,12 @@ DOCUMENTATION = """
 """
 
 import base64
+import binascii
 import json
 import os
 import select
 import typing as t
+from uuid import uuid4
 
 from ansible.errors import (
     AnsibleConnectionFailure,
@@ -57,7 +59,6 @@ class Connection(ConnectionBase):
         self.sendbuf = None
         self.recvbuf = None
         self.recvpoll = None
-        self.timeout = self.get_option('aoh_timeout')
 
 
     def _connect(self) -> Connection:  # noqa: F821
@@ -95,6 +96,35 @@ class Connection(ConnectionBase):
         return self
 
 
+    def _send_message(self, msg: dict) -> dict:
+        """Send a message to the client and wait for a response."""
+
+        assert self.sendbuf is not None
+        assert self.recvbuf is not None
+        assert self.recvpoll is not None
+
+        msg['id'] = str(uuid4())
+        self.sendbuf.write(json.dumps(msg) + '\n')
+        self.sendbuf.flush()
+
+        if not self.recvpoll.poll(self.get_option('aoh_timeout') * 1000):
+            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
+
+        try:
+            res = json.loads(self.recvbuf.readline())
+        except json.decoder.JSONDecodeError:
+            raise AnsibleError('Received corrupt AoH message')
+
+        if not 'id' in msg:
+            raise AnsibleError('Received AoH message without ID')
+        elif res['id'] != msg['id']:
+            raise AnsibleError('Received AoH message with unexpected ID')
+        elif 'err' in res:
+            raise AnsibleError(str(res['err']))
+
+        return res
+
+
     def exec_command(self, cmd: str, in_data: bytes | None = None,
                      sudoable: bool = True) -> tuple[int, bytes, bytes]:
         """Run a command on the host."""
@@ -103,24 +133,12 @@ class Connection(ConnectionBase):
 
         display.vvv(f'EXEC {cmd}', host=self._play_context.remote_addr)
 
-        assert self.sendbuf is not None
-        assert self.recvbuf is not None
-        assert self.recvpoll is not None
         assert isinstance(cmd, str)
         assert in_data is None
-        # assert sudoable is False
 
-        self.sendbuf.write(json.dumps({
-            'exec': cmd,
-        }) + '\n')
-        self.sendbuf.flush()
-
-        if not self.recvpoll.poll(self.timeout * 1000):
-            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
-        res = json.loads(self.recvbuf.readline())
-
-        if 'err' in res:
-            raise AnsibleError(res['err'])
+        res = self._send_message({ 'exec': cmd })
+        if not all(k in res for k in ['returncode', 'stdout', 'stderr']):
+            raise AnsibleError('Received invalid AoH EXEC response')
         return (
             res['returncode'],
             res['stdout'].encode('latin1'),
@@ -136,29 +154,15 @@ class Connection(ConnectionBase):
         display.vvv(f'PUT {in_path} TO {out_path}',
                     host=self._play_context.remote_addr)
 
-        assert self.sendbuf is not None
-        assert self.recvbuf is not None
-        assert self.recvpoll is not None
-
         if not os.path.exists(in_path):
             raise AnsibleFileNotFound(f'File does not exist: {in_path}')
         with open(in_path, 'rb') as f:
-            data = base64.b64encode(f.read()).decode()
-
-        self.sendbuf.write(json.dumps({
-            'put': {
-                'data': data,
-                'dest': out_path,
-            },
-        }) + '\n')
-        self.sendbuf.flush()
-
-        if not self.recvpoll.poll(self.timeout * 1000):
-            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
-        res = json.loads(self.recvbuf.readline())
-
-        if 'err' in res:
-            raise AnsibleError(res['err'])
+            self._send_message({
+                'put': {
+                    'data': base64.b64encode(f.read()).decode(),
+                    'dest': out_path,
+                },
+            })
 
 
     def fetch_file(self, in_path: str, out_path: str) -> None:
@@ -169,23 +173,16 @@ class Connection(ConnectionBase):
         display.vvv(f'FETCH {in_path} TO {out_path}',
                     host=self._play_context.remote_addr)
 
-        assert self.sendbuf is not None
-        assert self.recvbuf is not None
-        assert self.recvpoll is not None
+        res = self._send_message({ 'fetch': in_path })
+        if 'data' not in res:
+            raise AnsibleError('Received AoH FETCH response without data')
+        try:
+            data = base64.b64decode(res['data'], validate=True)
+        except binascii.Error:
+            raise AnsibleError('Received AoH FETCH response with corrupt data')
 
-        self.sendbuf.write(json.dumps({
-            'fetch': in_path,
-        }) + '\n')
-        self.sendbuf.flush()
-
-        if not self.recvpoll.poll(self.timeout * 1000):
-            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
-        res = json.loads(self.recvbuf.readline())
-
-        if 'err' in res:
-            raise AnsibleError(res['err'])
-        with open(out_path, 'rb') as f:
-            f.write(base64.b64decode(res['data']))
+        with open(out_path, 'wb') as f:
+            f.write(data)
 
 
     def close(self) -> None:
