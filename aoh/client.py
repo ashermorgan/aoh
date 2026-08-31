@@ -20,12 +20,15 @@ PASSWORD_PROMPTS = {
     'vault_password': 'Vault password: ',
 }
 
+# Set 10s EXEC keep alive interval (see also TIMEOUT in aoh.py)
+KEEP_ALIVE_INTERVAL = 10
+
 
 class ClientError(Exception):
     """Raised for miscellaneous client errors."""
 
 
-def exec(args):
+def exec(args, keep_alive_handler=None):
     """Run a command on the local host."""
 
     try:
@@ -36,6 +39,14 @@ def exec(args):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+
+        while p.returncode is None:
+            try:
+                p.wait(KEEP_ALIVE_INTERVAL)
+            except subprocess.TimeoutExpired:
+                if keep_alive_handler:
+                    keep_alive_handler()
+
         stdout, stderr = p.communicate()
         return {
             'returncode': p.returncode,
@@ -103,33 +114,48 @@ def send_json_request(url, req_data=None, method='GET', cookies=''):
     return status_code, headers, json.loads(data)
 
 
+def runner_update(url, cookies, data, keep_alive=False):
+    """Submit runner updates and process core response fields."""
+
+    status, _, res = send_json_request(url, data, 'PUT', cookies)
+
+    if 'logs' in res:
+        # Strip duplicate password prompts
+        logs = res['logs']
+        while any(logs.startswith(prompt[:-2]) for prompt in
+                    PASSWORD_PROMPTS.values()):
+            logs = logs.split('\n', 1)[1]
+
+        print(logs, end='')
+
+    if 'err' in res:
+        raise ClientError(res['err'])
+    elif status != 200:
+        raise ClientError(f'Server responded with {status}')
+    elif keep_alive and not res.get('keep-alive'):
+        raise ClientError('Received invalid keep-alive response')
+    elif res.get('finished'):
+        sys.exit(0)
+
+    return res
+
+
 def runner_loop(runner_url, cookies):
     """Main execution loop."""
 
     req = {}
 
     while True:
-        status, _, res = send_json_request(runner_url, req, 'PUT', cookies)
-
-        if 'logs' in res:
-            # Strip duplicate password prompts
-            logs = res['logs']
-            while any(logs.startswith(prompt[:-2]) for prompt in
-                      PASSWORD_PROMPTS.values()):
-                logs = logs.split('\n', 1)[1]
-
-            print(logs, end='')
-
-        if 'err' in res:
-            raise ClientError(res['err'])
-        elif status != 200:
-            raise ClientError(f'Server responded with {status}')
-
-        if res.get('finished'):
-            return
+        res = runner_update(runner_url, cookies, req)
 
         if 'exec' in res:
-            req = exec(res['exec'])
+            keep_alive_handler = lambda res=res: runner_update(
+                runner_url,
+                cookies,
+                { 'id': res['id'], 'keep-alive': True },
+                keep_alive=True
+            )
+            req = exec(res['exec'], keep_alive_handler)
             req['id'] = res['id']
         elif 'put' in res:
             req = put(res['put'])

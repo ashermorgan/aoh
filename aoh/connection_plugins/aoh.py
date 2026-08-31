@@ -12,19 +12,6 @@ DOCUMENTATION = """
             required: true
             vars:
                 - name: ansible_aoh_dir
-        aoh_timeout:
-            description: The timeout for AoH responses, in seconds
-            type: integer
-            default: 300
-            env:
-                - name: ANSIBLE_TIMEOUT
-            ini:
-                - key: timeout
-                  section: defaults
-            vars:
-                - name: ansible_aoh_timeout
-            cli:
-                - name: timeout
 """
 
 import base64
@@ -44,6 +31,9 @@ from ansible.plugins.connection import ConnectionBase
 from ansible.utils.display import Display
 
 display = Display()
+
+# Set 1m timeout (see also KEEP_ALIVE_INTERVAL in client.py)
+TIMEOUT = 60
 
 
 class Connection(ConnectionBase):
@@ -107,22 +97,31 @@ class Connection(ConnectionBase):
         self.sendbuf.write(json.dumps(msg) + '\n')
         self.sendbuf.flush()
 
-        if not self.recvpoll.poll(self.get_option('aoh_timeout') * 1000):
-            raise AnsibleConnectionFailure('Timed out waiting for AoH response')
+        while True:
+            if not self.recvpoll.poll(TIMEOUT * 1000):
+                raise AnsibleConnectionFailure('Timed out waiting for AoH '
+                                               'response')
 
-        try:
-            res = json.loads(self.recvbuf.readline())
-        except json.decoder.JSONDecodeError:
-            raise AnsibleError('Received corrupt AoH message')
+            try:
+                res = json.loads(self.recvbuf.readline())
+            except json.decoder.JSONDecodeError:
+                raise AnsibleError('Received corrupt AoH message')
 
-        if not 'id' in msg:
-            raise AnsibleError('Received AoH message without ID')
-        elif res['id'] != msg['id']:
-            raise AnsibleError('Received AoH message with unexpected ID')
-        elif 'err' in res:
-            raise AnsibleError(str(res['err']))
+            if not 'id' in msg:
+                raise AnsibleError('Received AoH message without ID')
+            elif res['id'] != msg['id']:
+                raise AnsibleError('Received AoH message with unexpected ID')
+            elif 'err' in res:
+                raise AnsibleError(str(res['err']))
 
-        return res
+            if not res.get('keep-alive'):
+                return res
+
+            self.sendbuf.write(json.dumps({
+                'id': msg['id'],
+                'keep-alive': True,
+            }) + '\n')
+            self.sendbuf.flush()
 
 
     def exec_command(self, cmd: str, in_data: bytes | None = None,
