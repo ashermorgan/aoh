@@ -8,7 +8,10 @@ from .runner import Runner
 from .security import *
 
 _RUNNERS = {}
-_GC_INTERVAL = 60 # 1 minute
+
+# Every 60s, teardown runners that finished more than 60s ago
+_GC_INTERVAL = 60
+_GC_THRESHOLD = 60
 
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
@@ -23,7 +26,7 @@ def gc():
 
     runners = list(_RUNNERS.items())
     for id, runner in runners:
-        if runner and runner.has_timed_out():
+        if runner and runner.has_timed_out(_GC_THRESHOLD):
             runner.teardown()
             _RUNNERS.pop(id, None)
 

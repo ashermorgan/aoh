@@ -13,8 +13,6 @@ _AOH_DEBUG = (os.getenv('AOH_DEBUG', '0') == '1')
 
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 
-_CLIENT_TIMEOUT = 600 # 10 minutes. TODO: update based on aoh timeout?
-
 _PASSWORD_PROMPTS = {
     'become_password': '^BECOME password.*:\\s*?$',
     'connection_password': '^SSH password:\\s*?$',
@@ -50,7 +48,7 @@ class Runner:
         self._thread = None
         self._runner = None
 
-        self._last_req = time.time()
+        self._t_finished = None
 
         try:
             # Create hostname file so connection plugin can verify hosts
@@ -114,6 +112,9 @@ class Runner:
         cmdline = ' '.join(shlex.quote(arg) for arg in self.args)
         cmdline += ' ' + self.playbook.cmdline
 
+        def _finished_callback(_):
+            self._t_finished = time.time()
+
         self._thread, self._runner = ansible_runner.run_async(
             private_data_dir=self._DIR,
             ident=self.id,
@@ -122,6 +123,7 @@ class Runner:
             cmdline=cmdline,
             passwords=pw_prompt_answers,
             playbook=self.playbook.path,
+            finished_callback=_finished_callback,
             quiet=not _AOH_DEBUG,
             suppress_env_files=True,
         )
@@ -134,11 +136,12 @@ class Runner:
         return self._runner.status not in ['starting', 'running']
 
 
-    def has_timed_out(self):
+    def has_timed_out(self, threshold):
         """Check whether the AoH runner has timed out."""
 
         with self._lock:
-            return self._last_req < time.time() - _CLIENT_TIMEOUT
+            return self._t_finished and \
+                    self._t_finished < time.time() - threshold
 
 
     def process_client_request(self, req):
@@ -146,13 +149,12 @@ class Runner:
 
         with self._lock:
             if self.id is None:
-                # Runner has already been torn down
+                # Runner has already been torn down, probably due to timeout
                 return {
                     'err': 'Client timeout',
                 }
 
             res = {}
-            self._last_req = time.time()
 
             # We check runner status first, in case new logs come in afterwards
             res['finished'] = self._runner_finished()
