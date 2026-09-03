@@ -20,9 +20,6 @@ PASSWORD_PROMPTS = {
     'vault_password': 'Vault password: ',
 }
 
-# Set 10s EXEC keep alive interval (see also TIMEOUT in aoh.py)
-KEEP_ALIVE_INTERVAL = 10
-
 # How long to sleep after receiving an empty responses
 WAIT_INTERVAL = 0.1
 
@@ -31,7 +28,7 @@ class ClientError(Exception):
     """Raised for miscellaneous client errors."""
 
 
-def exec(args, keep_alive_handler=None):
+def exec(args, keep_alive_interval=None, keep_alive_handler=None):
     """Run a command on the local host."""
 
     try:
@@ -45,7 +42,7 @@ def exec(args, keep_alive_handler=None):
 
         while p.returncode is None:
             try:
-                p.wait(KEEP_ALIVE_INTERVAL)
+                p.wait(keep_alive_interval)
             except subprocess.TimeoutExpired:
                 if keep_alive_handler:
                     keep_alive_handler()
@@ -158,7 +155,8 @@ def runner_loop(runner_url, cookies):
                 { 'id': res['id'], 'keep-alive': True },
                 keep_alive=True
             )
-            req = exec(res['exec'], keep_alive_handler)
+            req = exec(res['exec'], res['keep-alive-interval'],
+                       keep_alive_handler)
             req['id'] = res['id']
         elif 'put' in res:
             req = put(res['put'])

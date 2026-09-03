@@ -12,6 +12,27 @@ DOCUMENTATION = """
             required: true
             vars:
                 - name: ansible_aoh_dir
+        aoh_timeout:
+            description: The timeout for AoH responses, in seconds
+            type: integer
+            default: 60
+            env:
+                - name: ANSIBLE_TIMEOUT
+            ini:
+                - key: timeout
+                  section: defaults
+            vars:
+                - name: ansible_aoh_timeout
+            cli:
+                - name: timeout
+        aoh_keep_alive_count:
+            description: The number of keep alive messages expected per timeout
+            type: integer
+            default: 10
+            env:
+                - name: ANSIBLE_AOH_KEEP_ALIVE_COUNT
+            vars:
+                - name: ansible_aoh_keep_alive_count
 """
 
 import base64
@@ -32,9 +53,6 @@ from ansible.utils.display import Display
 
 display = Display()
 
-# Set 1m timeout (see also KEEP_ALIVE_INTERVAL in client.py)
-TIMEOUT = 60
-
 
 class Connection(ConnectionBase):
     """Ansible-over-HTTP (AoH) connection."""
@@ -45,6 +63,10 @@ class Connection(ConnectionBase):
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         super().__init__(*args, **kwargs)
+
+        self.timeout = self.get_option('aoh_timeout')
+        self.keep_alive_count = self.get_option('aoh_keep_alive_count')
+        self.keep_alive_interval = round(self.timeout/self.keep_alive_count, 1)
 
         self._sendbuf = None
         self._recvbuf = None
@@ -95,11 +117,12 @@ class Connection(ConnectionBase):
         assert self._recvpoll is not None
 
         msg['id'] = str(uuid4())
+        msg['keep-alive-interval'] = self.keep_alive_interval
         self._sendbuf.write(json.dumps(msg) + '\n')
         self._sendbuf.flush()
 
         while True:
-            if not self._recvpoll.poll(TIMEOUT * 1000):
+            if not self._recvpoll.poll(self.timeout * 1000):
                 raise AnsibleConnectionFailure('Timed out waiting for AoH '
                                                'response')
 
