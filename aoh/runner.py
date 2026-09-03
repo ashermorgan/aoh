@@ -30,6 +30,8 @@ class Runner:
         self.id = str(uuid4()) # Runner ID (set to None after teardown)
         self.playbook = playbook
         self.host = self.playbook.host or host or 'aoh_node'
+        self.args = args
+        self.passwords = passwords
 
         self._lock = Lock() # Used to protect all public methods
 
@@ -51,7 +53,7 @@ class Runner:
             with open(f'{self._DIR}/hostname', 'w') as f:
                 f.write(f'{self.host}\n')
 
-            self._start_runner(args, passwords)
+            self._start_runner()
 
             # We assume that ansible-runner will eventually create its log file
             while not os.path.exists(self._LOGS_PATH):
@@ -62,7 +64,7 @@ class Runner:
             raise
 
 
-    def _start_runner(self, args, passwords):
+    def _start_runner(self):
         """Configure and start the underlying ansible-runner."""
 
         # Set ansible_connection=aoh for the client host only. Note that we
@@ -102,9 +104,10 @@ class Runner:
             'ansible_aoh_dir': self._DIR,
         }
         pw_prompt_answers = {}
-        for pw_type in passwords:
-            pw_prompt_answers[_PASSWORD_PROMPTS[pw_type]] = passwords[pw_type]
-        cmdline = ' '.join(shlex.quote(arg) for arg in args)
+        for pw_type in self.passwords:
+            pw_prompt_answers[_PASSWORD_PROMPTS[pw_type]] = \
+                    self.passwords[pw_type]
+        cmdline = ' '.join(shlex.quote(arg) for arg in self.args)
         cmdline += ' ' + self.playbook.cmdline
 
         self._thread, self._runner = ansible_runner.run_async(
@@ -141,7 +144,6 @@ class Runner:
             if self.id is None:
                 # Runner has already been torn down
                 return {
-                    'finished': True,
                     'err': 'Client timeout',
                 }
 

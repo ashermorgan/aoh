@@ -46,9 +46,10 @@ class Connection(ConnectionBase):
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
         super().__init__(*args, **kwargs)
 
-        self.sendbuf = None
-        self.recvbuf = None
-        self.recvpoll = None
+        self._sendbuf = None
+        self._recvbuf = None
+        self._recvpoll = None
+        self._connected = False
 
 
     def _connect(self) -> Connection:  # noqa: F821
@@ -75,11 +76,11 @@ class Connection(ConnectionBase):
             if not os.path.exists(SENDBUF_PATH):
                 os.mkfifo(SENDBUF_PATH)
 
-            self.recvbuf = open(RECVBUF_PATH, 'r')  # noqa: SIM115
-            self.sendbuf = open(SENDBUF_PATH, 'w')  # noqa: SIM115
+            self._recvbuf = open(RECVBUF_PATH, 'r')  # noqa: SIM115
+            self._sendbuf = open(SENDBUF_PATH, 'w')  # noqa: SIM115
 
-            self.recvpoll = select.poll()
-            self.recvpoll.register(self.recvbuf, select.POLLIN)
+            self._recvpoll = select.poll()
+            self._recvpoll.register(self._recvbuf, select.POLLIN)
 
             self._connected = True
 
@@ -89,21 +90,21 @@ class Connection(ConnectionBase):
     def _send_message(self, msg: dict) -> dict:
         """Send a message to the client and wait for a response."""
 
-        assert self.sendbuf is not None
-        assert self.recvbuf is not None
-        assert self.recvpoll is not None
+        assert self._sendbuf is not None
+        assert self._recvbuf is not None
+        assert self._recvpoll is not None
 
         msg['id'] = str(uuid4())
-        self.sendbuf.write(json.dumps(msg) + '\n')
-        self.sendbuf.flush()
+        self._sendbuf.write(json.dumps(msg) + '\n')
+        self._sendbuf.flush()
 
         while True:
-            if not self.recvpoll.poll(TIMEOUT * 1000):
+            if not self._recvpoll.poll(TIMEOUT * 1000):
                 raise AnsibleConnectionFailure('Timed out waiting for AoH '
                                                'response')
 
             try:
-                res = json.loads(self.recvbuf.readline())
+                res = json.loads(self._recvbuf.readline())
             except json.decoder.JSONDecodeError:
                 raise AnsibleError('Received corrupt AoH message')
 
@@ -117,11 +118,11 @@ class Connection(ConnectionBase):
             if not res.get('keep-alive'):
                 return res
 
-            self.sendbuf.write(json.dumps({
+            self._sendbuf.write(json.dumps({
                 'id': msg['id'],
                 'keep-alive': True,
             }) + '\n')
-            self.sendbuf.flush()
+            self._sendbuf.flush()
 
 
     def exec_command(self, cmd: str, in_data: bytes | None = None,
@@ -191,10 +192,10 @@ class Connection(ConnectionBase):
                     f'{self.get_option('runner')}',
                     host=self._play_context.remote_addr)
 
-        if self.recvbuf:
-            self.recvbuf.close()
-        if self.sendbuf:
-            self.sendbuf.close()
+        if self._recvbuf:
+            self._recvbuf.close()
+        if self._sendbuf:
+            self._sendbuf.close()
 
         self._connected = False
 

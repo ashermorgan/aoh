@@ -23,6 +23,9 @@ PASSWORD_PROMPTS = {
 # Set 10s EXEC keep alive interval (see also TIMEOUT in aoh.py)
 KEEP_ALIVE_INTERVAL = 10
 
+# How long to sleep after receiving an empty responses
+WAIT_INTERVAL = 0.1
+
 
 class ClientError(Exception):
     """Raised for miscellaneous client errors."""
@@ -165,7 +168,7 @@ def runner_loop(runner_url, cookies):
             req['id'] = res['id']
         else:
             req = {}
-            time.sleep(0.1)
+            time.sleep(WAIT_INTERVAL)
 
 
 def create_runner(playbook, args):
