@@ -9,8 +9,12 @@ from uuid import uuid4
 
 import ansible_runner
 
+_AOH_DEBUG = (os.getenv('AOH_DEBUG', '0') == '1')
+
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
+
 _CLIENT_TIMEOUT = 600 # 10 minutes. TODO: update based on aoh timeout?
+
 _PASSWORD_PROMPTS = {
     'become_password': '^BECOME password.*:\\s*?$',
     'connection_password': '^SSH password:\\s*?$',
@@ -118,7 +122,7 @@ class Runner:
             cmdline=cmdline,
             passwords=pw_prompt_answers,
             playbook=self.playbook.path,
-            quiet=True,
+            quiet=not _AOH_DEBUG,
             suppress_env_files=True,
         )
 

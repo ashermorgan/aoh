@@ -1,4 +1,4 @@
-# Ansible-over-HTTP (AoH)
+# AoH: Ansible-over-HTTP
 
 Run an Ansible playbook with a single `curl <url> | python` command.
 
@@ -49,6 +49,9 @@ docker stop aoh
 
 AoH supports the following configuration options, specified either via
 environment variables or a `.env` file.
+
+- `AOH_DEBUG`: If set to `1`, the AoH server will copy Ansible logs to stdout.
+  Defaults to `0`.
 
 - `AOH_ORIGIN`: The origin of the AoH server, as referenced in the `/run.py`
   script (e.g. `https://aoh.example.com:5000`). This must be set if running AoH
