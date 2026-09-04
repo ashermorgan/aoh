@@ -90,7 +90,7 @@ def runner_update(path, short_id):
     if runner.playbook.name != path:
         return { 'err': f"Playbook not found: {path}" }, 400
 
-    res = runner.process_client_request(request.json)
+    res = runner.process_message(request.json)
 
     if res['finished']:
         runner.teardown()

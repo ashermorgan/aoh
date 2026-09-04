@@ -144,8 +144,8 @@ class Runner:
                     self._t_finished < time.time() - threshold
 
 
-    def process_client_request(self, req):
-        """Process an AoH client request."""
+    def process_message(self, req):
+        """Process an AoH client message."""
 
         with self._lock:
             if self.id is None:

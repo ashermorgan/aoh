@@ -114,8 +114,8 @@ def send_json_request(url, req_data=None, method='GET', cookies=''):
     return status_code, headers, json.loads(data)
 
 
-def runner_update(url, cookies, data, keep_alive=False):
-    """Submit runner updates and process core response fields."""
+def send_message(url, cookies, data, keep_alive=False):
+    """Send a message to the AoH runner and process core response fields."""
 
     status, _, res = send_json_request(url, data, 'PUT', cookies)
 
@@ -141,15 +141,15 @@ def runner_update(url, cookies, data, keep_alive=False):
 
 
 def runner_loop(runner_url, cookies):
-    """Main execution loop."""
+    """Main runner loop."""
 
     req = {}
 
     while True:
-        res = runner_update(runner_url, cookies, req)
+        res = send_message(runner_url, cookies, req)
 
         if 'exec' in res:
-            keep_alive_handler = lambda res=res: runner_update(
+            keep_alive_handler = lambda res=res: send_message(
                 runner_url,
                 cookies,
                 { 'id': res['id'], 'keep-alive': True },
@@ -170,7 +170,7 @@ def runner_loop(runner_url, cookies):
 
 
 def create_runner(playbook, args):
-    """Main execution loop."""
+    """Create a runner and enter the runner loop."""
 
     url = f'{API}/runners/{playbook}'
 
