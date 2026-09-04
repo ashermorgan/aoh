@@ -210,8 +210,9 @@ def cli(args):
 
         print(f'Usage: {prog} [-h] [<playbook>] [<opts>...]')
         print()
-        print('Runs an Ansible playbook on a remote server over an HTTP '
-              'connection.')
+        print('Runs Ansible playbooks on a remote server and fetches commands '
+              'for the local')
+        print('host\'s tasks over HTTP.')
         print()
         print('Arguments: ')
         print('  playbook          The name of the playbook to run (defaults '
