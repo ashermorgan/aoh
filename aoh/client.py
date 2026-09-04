@@ -28,26 +28,30 @@ class ClientError(Exception):
     """Raised for miscellaneous client errors."""
 
 
-def exec(args, keep_alive_interval=None, keep_alive_handler=None):
+def exec(args, keep_alive_interval, keep_alive_handler):
     """Run a command on the local host."""
 
     try:
         p = subprocess.Popen(
-            args,
+            args['cmd'],
             shell=True,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
 
+        stdin = args['stdin']
+        if stdin is not None:
+            stdin = stdin.encode('latin1')
+
         while p.returncode is None:
             try:
-                p.wait(keep_alive_interval)
+                stdout, stderr = p.communicate(input=stdin,
+                                               timeout=keep_alive_interval)
             except subprocess.TimeoutExpired:
-                if keep_alive_handler:
-                    keep_alive_handler()
+                keep_alive_handler()
+                stdin = None # Don't send input a second time
 
-        stdout, stderr = p.communicate()
         return {
             'returncode': p.returncode,
             'stdout': stdout.decode('latin1'),

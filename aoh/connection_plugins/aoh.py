@@ -58,7 +58,8 @@ class Connection(ConnectionBase):
     """Ansible-over-HTTP (AoH) connection."""
 
     transport = 'aoh'
-    has_pipelining = False
+    has_pipelining = True
+    has_tty = False
 
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
@@ -157,9 +158,13 @@ class Connection(ConnectionBase):
         display.vvv(f'EXEC {cmd}', host=self._play_context.remote_addr)
 
         assert isinstance(cmd, str)
-        assert in_data is None
 
-        res = self._send_message({ 'exec': cmd })
+        res = self._send_message({
+            'exec': {
+                'cmd': cmd,
+                'stdin': in_data and in_data.decode('latin1'),
+            },
+        })
         if not all(k in res for k in ['returncode', 'stdout', 'stderr']):
             raise AnsibleError('Received invalid AoH EXEC response')
         return (
