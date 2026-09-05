@@ -22,9 +22,6 @@ main.yml: # The playbook name
   # to false.
   password: true
 
-  # Additional raw ansible-playbook options
-  cmdline: '--limit aoh' # only run tasks for the current client
-
   # Whether to print Ansible output on the client. Defaults to true.
   output: true
 
@@ -39,6 +36,9 @@ main.yml: # The playbook name
   # allow_opts. Some options are always blocked, see aoh/security.py.
   block_opts:
     - '--list-tags'
+
+  # Additional raw ansible-playbook options
+  extra_args: ['--limit', 'aoh'] # only run tasks for the current client
 
   # Whether to allow clients to use Jinja expressions in ansible-playbook
   # options. Defaults to false.

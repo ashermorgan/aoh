@@ -21,11 +21,11 @@ class Playbook:
             'host': str,
             'groups': list,
             'password': bool,
-            'cmdline': str,
             'output': bool,
             'jinja': bool,
             'allow_opts': list, # We'll just assume that elements are strings
             'block_opts': list,
+            'extra_args': list,
             'web_description': str,
         }
 
@@ -39,11 +39,11 @@ class Playbook:
         self.host = dict.get('host')
         self.groups = dict.get('groups', [])
         self.password = dict.get('password', False)
-        self.cmdline = dict.get('cmdline', '')
         self.output = dict.get('output', True)
         self.jinja = dict.get('jinja', False)
         self.allow_opts = dict.get('allow_opts', [])
         self.block_opts = dict.get('block_opts', [])
+        self.extra_args = dict.get('extra_args', [])
         self.web_description = dict.get('web_description')
 
         self.path = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.path))

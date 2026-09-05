@@ -109,8 +109,8 @@ class Runner:
         for pw_type in self.passwords:
             pw_prompt_answers[_PASSWORD_PROMPTS[pw_type]] = \
                     self.passwords[pw_type]
-        cmdline = ' '.join(shlex.quote(arg) for arg in self.args)
-        cmdline += ' ' + self.playbook.cmdline
+        args = self.args + self.playbook.extra_args
+        cmdline = ' '.join(shlex.quote(arg) for arg in args)
 
         def _finished_callback(_):
             self._t_finished = time.time()

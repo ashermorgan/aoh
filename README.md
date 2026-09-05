@@ -102,9 +102,6 @@ main.yml: # The playbook name
   # to false.
   password: true
 
-  # Additional raw ansible-playbook options
-  cmdline: '--limit aoh' # only run tasks for the current client
-
   # Whether to print Ansible output on the client. Defaults to true.
   output: true
 
@@ -119,6 +116,9 @@ main.yml: # The playbook name
   # allow_opts. Some options are always blocked, see aoh/security.py.
   block_opts:
     - '--list-tags'
+
+  # Additional raw ansible-playbook options
+  extra_args: ['--limit', 'aoh'] # only run tasks for the current client
 
   # Whether to allow clients to use Jinja expressions in ansible-playbook
   # options. Defaults to false.
@@ -184,7 +184,7 @@ takes, or can be configured to take, to mitigate security risks.
   playbook option.
 
 - **Forcing Ansible Options:** Additional `ansible-playbook` options may be
-  added to every execution via the `cmdline` playbook option. For example, if
+  added to every execution via the `extra_args` playbook option. For example, if
   clients must not be able to trigger the execution of other hosts' tasks, then
-  the `--limit aoh` option should be added to `cmdline`. Consider also adding
-  these options to `block_opts` to prevent clients from modifying them.
+  the `['--limit', 'aoh']` option should be added to `extra_args`. Consider also
+  adding these options to `block_opts` to prevent clients from modifying them.

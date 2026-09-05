@@ -86,7 +86,7 @@ def get_required_passwords(playbook, args):
     if playbook.password:
         pw_types.add('aoh_password')
 
-    opts = _get_opts(args)
+    opts = _get_opts(args + playbook.extra_args)
     for opt, pw_type in _CLI_PASSWORD_OPTS.items():
         if opt in opts:
             pw_types.add(pw_type)
