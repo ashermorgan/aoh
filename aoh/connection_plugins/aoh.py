@@ -157,14 +157,19 @@ class Connection(ConnectionBase):
 
         display.vvv(f'EXEC {cmd}', host=self._play_context.remote_addr)
 
-        assert isinstance(cmd, str)
+        msg = {
+            'cmd': cmd,
+            'stdin': in_data and in_data.decode('latin1'),
+        }
 
-        res = self._send_message({
-            'exec': {
-                'cmd': cmd,
-                'stdin': in_data and in_data.decode('latin1'),
-            },
-        })
+        if self.become and sudoable and self.become._id:
+            msg['become'] = {
+                'prompt': self.become.prompt,
+                'password': self.become.get_option('become_pass') or '',
+                'success': self.become.success,
+            }
+
+        res = self._send_message({ 'exec': msg })
         if not all(k in res for k in ['returncode', 'stdout', 'stderr']):
             raise AnsibleError('Received invalid AoH EXEC response')
         return (

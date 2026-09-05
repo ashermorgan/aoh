@@ -5,9 +5,11 @@ import getpass
 import json
 import os
 import platform
+import selectors
 import subprocess
 import sys
 import time
+import typing
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -26,63 +28,6 @@ WAIT_INTERVAL = 0.1
 
 class ClientError(Exception):
     """Raised for miscellaneous client errors."""
-
-
-def exec(args, keep_alive_interval, keep_alive_handler):
-    """Run a command on the local host."""
-
-    try:
-        p = subprocess.Popen(
-            args['cmd'],
-            shell=True,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        stdin = args['stdin']
-        if stdin is not None:
-            stdin = stdin.encode('latin1')
-
-        while p.returncode is None:
-            try:
-                stdout, stderr = p.communicate(input=stdin,
-                                               timeout=keep_alive_interval)
-            except subprocess.TimeoutExpired:
-                keep_alive_handler()
-                stdin = None # Don't send input a second time
-
-        return {
-            'returncode': p.returncode,
-            'stdout': stdout.decode('latin1'),
-            'stderr': stderr.decode('latin1'),
-        }
-    except Exception as e:  # noqa: BLE001
-        return { 'err': str(e) }
-
-
-def put(args):
-    """Transfer a file to the local host."""
-
-    try:
-        with open(args['dest'], 'wb') as f:
-            f.write(base64.b64decode(args['data']))
-    except Exception as e:  # noqa: BLE001
-        return { 'err': str(e) }
-    else:
-        return { 'ok': True }
-
-
-def fetch(args):
-    """Fetch a file from the local host."""
-
-    try:
-        with open(args['dest'], 'rb') as f:
-            return {
-                'data': base64.b64encode(f.read()).decode(),
-            }
-    except Exception as e:  # noqa: BLE001
-        return { 'err': str(e) }
 
 
 def send_json_request(url, req_data=None, method='GET', cookies=''):
@@ -142,6 +87,148 @@ def send_message(url, cookies, data, keep_alive=False):
         sys.exit(0)
 
     return res
+
+
+def become(args, p):
+    """
+    Ensure that become succeeds using the provided arguments.
+
+    Modeled after _ensure_become_success() in the local connection plugin.
+    """
+
+    os.set_blocking(p.stdout.fileno(), False)
+    os.set_blocking(p.stderr.fileno(), False)
+
+    prompt = args['prompt'].encode()
+    password = args['password'].encode()
+    success = args['success'].encode()
+
+    stdout = b''
+    stderr = b''
+    stdout_offset = 0
+    stderr_offset = 0
+
+    timeout = time.monotonic() + 10
+    sent_password = False
+
+    def _error_msg(msg):
+        msg += ' waiting for become success'
+        if prompt and password and not sent_password:
+            msg += ' or become password prompt'
+        msg += '.'
+
+        if stdout:
+            msg += f'\n>>> Standard Output\n{stdout.decode()}'
+        if stderr:
+            msg += f'\n>>> Standard Error\n{stderr.decode()}'
+
+        return msg
+
+    with selectors.DefaultSelector() as selector:
+        selector.register(p.stdout, selectors.EVENT_READ, 'stdout')
+        selector.register(p.stderr, selectors.EVENT_READ, 'stderr')
+
+        while not success in stdout:
+            if not selector.get_map():
+                # All descriptors are EOF
+                raise ClientError(_error_msg('Premature end of stream'))
+
+            events = selector.select(timeout - time.monotonic())
+            if not events:
+                raise ClientError(_error_msg('Timed out'))
+
+            for key, _ in events:
+                f = typing.cast(typing.BinaryIO, key.fileobj)
+                output = f.read()
+
+                if not output:
+                    # Descriptor is EOF
+                    selector.unregister(f)
+                elif key.data == 'stdout':
+                    stdout += output
+                else:
+                    stderr += output
+
+            if prompt and password and (prompt in stdout[stdout_offset:] or
+                                        prompt in stderr[stderr_offset:]):
+                if sent_password:
+                    raise ClientError(_error_msg('Duplicate become password '
+                                                 'prompt encountered'))
+
+                stdout_offset = len(stdout)
+                stderr_offset = len(stderr)
+
+                p.stdin.write(password + b'\n')
+                p.stdin.flush()
+
+                sent_password = True
+
+    os.set_blocking(p.stdout.fileno(), True)
+    os.set_blocking(p.stderr.fileno(), True)
+
+    return stdout, stderr
+
+
+def exec(args, keep_alive_interval, keep_alive_handler):
+    """Run a command on the local host."""
+
+    try:
+        p = subprocess.Popen(
+            args['cmd'],
+            shell=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        stdin = args['stdin']
+        if stdin is not None:
+            stdin = stdin.encode('latin1')
+
+        if 'become' in args:
+            become_stdout, become_stderr = become(args['become'], p)
+        else:
+            become_stdout, become_stderr = b'', b''
+
+        while p.returncode is None:
+            try:
+                stdout, stderr = p.communicate(input=stdin,
+                                               timeout=keep_alive_interval)
+            except subprocess.TimeoutExpired:
+                keep_alive_handler()
+                stdin = None # Don't send input a second time
+
+        return {
+            'returncode': p.returncode,
+            'stdout': (become_stdout + stdout).decode('latin1'),
+            'stderr': (become_stderr + stderr).decode('latin1'),
+        }
+    except Exception as e:  # noqa: BLE001
+        return { 'err': str(e) }
+
+
+def put(args):
+    """Transfer a file to the local host."""
+
+    try:
+        with open(args['dest'], 'wb') as f:
+            f.write(base64.b64decode(args['data']))
+    except Exception as e:  # noqa: BLE001
+        return { 'err': str(e) }
+    else:
+        return { 'ok': True }
+
+
+def fetch(args):
+    """Fetch a file from the local host."""
+
+    try:
+        with open(args['dest'], 'rb') as f:
+            return {
+                'data': base64.b64encode(f.read()).decode(),
+            }
+    except Exception as e:  # noqa: BLE001
+        return { 'err': str(e) }
 
 
 def runner_loop(runner_url, cookies):
