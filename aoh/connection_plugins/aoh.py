@@ -110,17 +110,30 @@ class Connection(ConnectionBase):
         return self
 
 
-    def _send_message(self, msg: dict) -> dict:
-        """Send a message to the client and wait for a response."""
+    def _send_message_async(self, msg: dict) -> str:
+        """Send a message to the client and return the message ID."""
 
         assert self._sendbuf is not None
+
+        if 'id' not in msg:
+            msg['id'] = str(uuid4())
+        msg['keep-alive-interval'] = self.keep_alive_interval
+
+        raw_msg = json.dumps(msg)
+        display.debug(f'AOH SEND {raw_msg}')
+        self._sendbuf.write(raw_msg + '\n')
+        self._sendbuf.flush()
+
+        return msg['id']
+
+
+    def _send_message_sync(self, msg: dict) -> dict:
+        """Send a message to the client and wait for a response."""
+
         assert self._recvbuf is not None
         assert self._recvpoll is not None
 
-        msg['id'] = str(uuid4())
-        msg['keep-alive-interval'] = self.keep_alive_interval
-        self._sendbuf.write(json.dumps(msg) + '\n')
-        self._sendbuf.flush()
+        id = self._send_message_async(msg)
 
         while True:
             if not self._recvpoll.poll(self.timeout * 1000):
@@ -128,7 +141,9 @@ class Connection(ConnectionBase):
                                                'response')
 
             try:
-                res = json.loads(self._recvbuf.readline())
+                line = self._recvbuf.readline()
+                display.debug(f'AOH RECV {line}')
+                res = json.loads(line)
             except json.decoder.JSONDecodeError:
                 raise AnsibleError('Received corrupt AoH message')
 
@@ -142,11 +157,7 @@ class Connection(ConnectionBase):
             if not res.get('keep-alive'):
                 return res
 
-            self._sendbuf.write(json.dumps({
-                'id': msg['id'],
-                'keep-alive': True,
-            }) + '\n')
-            self._sendbuf.flush()
+            self._send_message_async({ 'id': id, 'keep-alive': True })
 
 
     def exec_command(self, cmd: str, in_data: bytes | None = None,
@@ -169,7 +180,7 @@ class Connection(ConnectionBase):
                 'success': self.become.success,
             }
 
-        res = self._send_message({ 'exec': msg })
+        res = self._send_message_sync({ 'exec': msg })
         if not all(k in res for k in ['returncode', 'stdout', 'stderr']):
             raise AnsibleError('Received invalid AoH EXEC response')
         return (
@@ -190,7 +201,7 @@ class Connection(ConnectionBase):
         if not os.path.exists(in_path):
             raise AnsibleFileNotFound(f'File does not exist: {in_path}')
         with open(in_path, 'rb') as f:
-            self._send_message({
+            self._send_message_sync({
                 'put': {
                     'data': base64.b64encode(f.read()).decode(),
                     'dest': out_path,
@@ -206,7 +217,7 @@ class Connection(ConnectionBase):
         display.vvv(f'FETCH {in_path} TO {out_path}',
                     host=self._play_context.remote_addr)
 
-        res = self._send_message({ 'fetch': in_path })
+        res = self._send_message_sync({ 'fetch': in_path })
         if 'data' not in res:
             raise AnsibleError('Received AoH FETCH response without data')
         try:
