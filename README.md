@@ -188,3 +188,14 @@ takes, or can be configured to take, to mitigate security risks.
   clients must not be able to trigger the execution of other hosts' tasks, then
   the `['--limit', 'aoh']` option should be added to `extra_args`. Consider also
   adding these options to `block_opts` to prevent clients from modifying them.
+
+
+## Limitations
+
+- AoH directs the client's tasks to be executed over HTTP by setting the
+  `ansible_connection` option via a custom inventory host variable. This
+  variable must not be overridden by, for example, variables in `host_vars/*`
+  files. Refer to Ansible's [ansible-precedence][variable precedence
+  documentation] for more information.
+
+[ansible-precedence]: https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence
