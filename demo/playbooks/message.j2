@@ -1,0 +1,8 @@
+Welcome to AoH!
+
+The server is running this playbook with ansible-playbook, and your client is
+fetching commands for its own tasks over HTTP.
+
+Username: {{ ansible_facts.user_id }}
+Hostname: {{ ansible_facts.hostname }}
+Timestamp: {{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }} UTC

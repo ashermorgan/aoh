@@ -1,4 +1,7 @@
 - name: My play
   hosts: all
   tasks:
-    - ping:
+    - name: Write message to ~/aoh-demo.txt
+      ansible.builtin.template:
+        src: message.j2
+        dest: ~/aoh-demo.txt

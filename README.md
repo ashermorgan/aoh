@@ -2,13 +2,13 @@
 
 Run an Ansible playbook with a single `curl <url> | python` command.
 
-More specifically, this command triggers an `ansible-playbook` run on the AoH
-server, with the local client fetching execution instructions for its own tasks
-over HTTP. This is especially useful for machines that are behind a NAT/firewall
-(thus preventing the use of `ansible-playbook` directly), but also either run
-Windows or aren't trusted with full repository access (thus preventing the use
-of `ansible-pull`). For example, AoH can be used to easily install dotfiles on
-new machines, anytime, anywhere.
+More specifically, this triggers an `ansible-playbook` run on the AoH server,
+with the local client fetching commands for its own tasks over HTTP. This is
+especially useful for machines that are behind a NAT/firewall (thus preventing
+the use of `ansible-playbook` directly), but also either run Windows or aren't
+trusted with full repository access (thus preventing the use of `ansible-pull`).
+For example, AoH can be used to easily install dotfiles on new machines,
+anytime, anywhere.
 
 
 ## Comparison with Traditional Ansible & Ansible Pull
@@ -34,7 +34,7 @@ the following commands:
 docker build -t aoh .
 docker run --rm --detach --name aoh -p 8000:8000 -v ./demo:/aoh aoh
 
-# Run the client CLI (the AoH password is "hunter2")
+# Run the client CLI (the demo AoH password is "hunter2")
 curl -s 127.0.0.1:8000/run | python3
 curl -s 127.0.0.1:8000/run | python3 - --help
 
@@ -118,7 +118,8 @@ main.yml: # The playbook name
     - '--list-tags'
 
   # Additional raw ansible-playbook options
-  extra_args: ['--limit', 'aoh'] # only run tasks for the current client
+  extra_args:
+    - '--diff'
 
   # Whether to allow clients to use Jinja expressions in ansible-playbook
   # options. Defaults to false.

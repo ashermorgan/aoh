@@ -38,7 +38,8 @@ main.yml: # The playbook name
     - '--list-tags'
 
   # Additional raw ansible-playbook options
-  extra_args: ['--limit', 'aoh'] # only run tasks for the current client
+  extra_args:
+    - '--diff'
 
   # Whether to allow clients to use Jinja expressions in ansible-playbook
   # options. Defaults to false.
