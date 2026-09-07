@@ -18,6 +18,6 @@ function copy(cmd) {
     document.getElementById('copy').innerHTML = DONE_SVG;
     setTimeout(() => {
         document.getElementById('copy').innerHTML = COPY_SVG;
-    document.getElementById('copy').disabled = false;
+        document.getElementById('copy').disabled = false;
     }, 1000);
 }

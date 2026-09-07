@@ -48,7 +48,7 @@ def install():
 def new_runner(path):
     playbook = get_playbook(path)
     if not playbook:
-        return { 'err': f"Playbook not found: {path}" }, 400
+        return { 'err': f'Playbook not found: {path}' }, 400
 
     if not validate_args(playbook, request.json['args']):
         return { 'err': 'Bad or banned arguments passed.' }, 400
@@ -88,7 +88,7 @@ def runner_update(path, short_id):
     if not runner:
         return { 'err': 'Runner not found' }, 404
     if runner.playbook.name != path:
-        return { 'err': f"Playbook not found: {path}" }, 400
+        return { 'err': f'Playbook not found: {path}' }, 400
 
     res = runner.process_message(request.json)
 

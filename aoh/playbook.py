@@ -23,7 +23,7 @@ class Playbook:
             'password': bool,
             'output': bool,
             'jinja': bool,
-            'allow_opts': list, # We'll just assume that elements are strings
+            'allow_opts': list,
             'block_opts': list,
             'extra_args': list,
             'web_description': str,
@@ -32,6 +32,9 @@ class Playbook:
         for key, _type in _types.items():
             if key in dict and type(dict[key]) != _type:
                 raise PlaybookError(f'"{key}" field must be of type {_type}')
+
+            if  _type is list and any(type(x) != str for x in dict[key]):
+                raise PlaybookError(f'"{key}" elements must be of type str')
 
         self.name = name
         self.path = dict.get('path', name)

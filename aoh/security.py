@@ -115,7 +115,7 @@ def validate_aoh_password(playbook, password):
 
     if not playbook.password:
         return True
-    if not password:
+    if password is None:
         return False
 
     with open(_PASSWORDS_FILE, 'r') as f:

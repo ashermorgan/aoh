@@ -10,6 +10,8 @@ DOCUMENTATION = """
             description: The AoH runner directory
             type: string
             required: true
+            env:
+                - name: ANSIBLE_AOH_DIR
             vars:
                 - name: ansible_aoh_dir
         aoh_timeout:

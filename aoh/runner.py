@@ -3,9 +3,9 @@ import os
 import shlex
 import shutil
 import tempfile
+import threading
 import time
-from threading import Lock
-from uuid import uuid4
+import uuid
 
 import ansible_runner
 
@@ -19,6 +19,7 @@ _PASSWORD_PROMPTS = {
     'vault_password': '^Vault password:\\s*?$',
 }
 
+
 class RunnerError(Exception):
     """Raised for AoH runner errors."""
 
@@ -29,13 +30,13 @@ class Runner:
     def __init__(self, playbook, host, args, passwords):
         """Create a new AoH runner."""
 
-        self.id = str(uuid4()) # Runner ID (set to None after teardown)
+        self.id = str(uuid.uuid4()) # Runner ID (set to None after teardown)
         self.playbook = playbook
         self.host = self.playbook.host or host or 'aoh_node'
         self.args = args
         self.passwords = passwords
 
-        self._lock = Lock() # Used to protect all public methods
+        self._lock = threading.Lock() # Used to protect all public methods
 
         self._DIR = tempfile.mkdtemp(prefix='aoh-')
         self._LOGS_PATH = f'{self._DIR}/artifacts/{self.id}/stdout'
@@ -82,7 +83,6 @@ class Runner:
             private_data_dir=self._DIR,
             quiet=True,
         )[0]
-
         connection_plugins = eval(next(
             x for x in raw_config.split('\n')
             if x.startswith('DEFAULT_CONNECTION_PLUGIN_PATH')
@@ -93,6 +93,7 @@ class Runner:
         ).split('= ')[1])
 
         env = {
+            'ANSIBLE_AOH_DIR': self._DIR,
             'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
                 [_CONNECTION_PLUGIN_DIR] + connection_plugins
             ),
@@ -101,9 +102,6 @@ class Runner:
             'ANSIBLE_INVENTORY': ','.join(
                 [f'{self._DIR}/inventory.ini'] + inventory
             ),
-        }
-        vars = {
-            'ansible_aoh_dir': self._DIR,
         }
         pw_prompt_answers = {}
         for pw_type in self.passwords:
@@ -119,7 +117,6 @@ class Runner:
             private_data_dir=self._DIR,
             ident=self.id,
             envvars=env,
-            extravars=vars,
             cmdline=cmdline,
             passwords=pw_prompt_answers,
             playbook=self.playbook.path,
@@ -150,9 +147,7 @@ class Runner:
         with self._lock:
             if self.id is None:
                 # Runner has already been torn down, probably due to timeout
-                return {
-                    'err': 'Client timeout',
-                }
+                return { 'err': 'Client timeout' }
 
             res = {}
 
