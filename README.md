@@ -138,7 +138,7 @@ the `$AOH_PASSWORDS_FILE` file. For example:
 
 <!-- EXAMPLE COPIED FROM demo/passwords.yml: -->
 
-```
+```yml
 # Require the password "hunter2" to execute the main.yml playbook
 main.yml: $2a$14$LfC6Bcczc0WM.OObqgQPYeVvYa10g1Z4Z8C.eERyd.GarPmNa5/ve
 ```
@@ -196,7 +196,7 @@ takes, or can be configured to take, to mitigate security risks.
 - AoH directs the client's tasks to be executed over HTTP by setting the
   `ansible_connection` option via a custom inventory host variable. This
   variable must not be overridden by, for example, variables in `host_vars/*`
-  files. Refer to Ansible's [ansible-precedence][variable precedence
-  documentation] for more information.
+  files. Refer to Ansible's [variable precedence
+  documentation][ansible-precedence] for more information.
 
 [ansible-precedence]: https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence
