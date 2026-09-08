@@ -13,7 +13,7 @@ import typing
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-API = '{{ API_URL }}' #{# Substitution performed by Flask #}
+AOH_ORIGIN = '{{ AOH_ORIGIN }}' #{# Substitution performed by Flask #}
 
 PASSWORD_PROMPTS = {
     'aoh_password': 'AoH password: ',
@@ -263,7 +263,7 @@ def runner_loop(runner_url, cookies):
 def create_runner(playbook, args):
     """Create a runner and enter the runner loop."""
 
-    url = f'{API}/runners/{playbook}'
+    url = f'{AOH_ORIGIN}/runners/{playbook}'
 
     req = {
         'host': platform.node(),
@@ -287,7 +287,7 @@ def create_runner(playbook, args):
     # We assume that only one cookie will be set
     session_token = headers['Set-Cookie'].split(';')[0]
 
-    runner_loop(f"{API}{headers['Location']}", session_token)
+    runner_loop(f"{AOH_ORIGIN}{headers['Location']}", session_token)
 
 
 def cli(args):
@@ -297,7 +297,8 @@ def cli(args):
         if len(args) >= 1 and args[0] != '-':
             prog = args[0]
         else:
-            prog = f'curl {API}/run | {os.path.basename(sys.executable)} -'
+            prog = f'curl {AOH_ORIGIN}/run | ' \
+                   f'{os.path.basename(sys.executable)} -'
 
         print(f'Usage: {prog} [-h] [<playbook>] [<opts>...]')
         print()

@@ -34,7 +34,7 @@ def gc():
 @app.context_processor
 def inject_stage_and_region():
     return {
-        'API_URL': os.getenv('AOH_ORIGIN', request.host_url[:-1])
+        'AOH_ORIGIN': os.getenv('AOH_ORIGIN', request.host_url[:-1])
     }
 
 

@@ -18,7 +18,7 @@
             <h1>{{ description }}</h1>
             {% endif %}
 
-            {% set cmd = 'curl %s/run | python3' % API_URL %}
+            {% set cmd = 'curl %s/run | python3' % AOH_ORIGIN %}
             {% if playbook != 'main.yml' %}
             {% set cmd = cmd + ' - %s' % playbook %}
             {% endif %}
