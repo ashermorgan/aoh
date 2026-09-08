@@ -37,13 +37,13 @@ main.yml: # The playbook name
   block_opts:
     - '--list-tags'
 
+  # Whether to allow clients to use Jinja expressions in ansible-playbook
+  # arguments. Defaults to false.
+  jinja_args: true
+
   # Additional raw ansible-playbook options
   extra_args:
     - '--diff'
-
-  # Whether to allow clients to use Jinja expressions in ansible-playbook
-  # options. Defaults to false.
-  jinja: true
 
   # The description displayed on the playbook web page. Defaults to null, which
   # disables the playbook web page.

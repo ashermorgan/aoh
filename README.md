@@ -117,13 +117,13 @@ main.yml: # The playbook name
   block_opts:
     - '--list-tags'
 
+  # Whether to allow clients to use Jinja expressions in ansible-playbook
+  # arguments. Defaults to false.
+  jinja_args: true
+
   # Additional raw ansible-playbook options
   extra_args:
     - '--diff'
-
-  # Whether to allow clients to use Jinja expressions in ansible-playbook
-  # options. Defaults to false.
-  jinja: true
 
   # The description displayed on the playbook web page. Defaults to null, which
   # disables the playbook web page.
@@ -168,9 +168,10 @@ takes, or can be configured to take, to mitigate security risks.
   options can be allowed or blocked via the `allow_opts` and `block_opts`
   playbook options.
 
-- **Blocking Jinja Expressions:** By default, clients-supplied
-  `ansible-playbook` options containing Jinja expressions are blocked. If
-  necessary, this protection can be disabled via the `jinja` playbook option.
+- **Blocking Jinja Expressions in Ansible Arguments:** By default,
+  clients-supplied `ansible-playbook` options containing Jinja expressions are
+  blocked. If necessary, this protection can be disabled via the `jinja_args`
+  playbook option.
 
 - **Hiding Ansible Output:** By default, clients receives and print all Ansible
   output, including `--diff` output, `--verbose` logs, and even output from

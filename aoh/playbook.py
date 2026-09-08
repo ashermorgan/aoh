@@ -22,9 +22,9 @@ class Playbook:
             'groups': list,
             'password': bool,
             'output': bool,
-            'jinja': bool,
             'allow_opts': list,
             'block_opts': list,
+            'jinja_args': bool,
             'extra_args': list,
             'web_description': str,
         }
@@ -45,9 +45,9 @@ class Playbook:
         self.groups = dict.get('groups', [])
         self.password = dict.get('password', False)
         self.output = dict.get('output', True)
-        self.jinja = dict.get('jinja', False)
         self.allow_opts = dict.get('allow_opts', [])
         self.block_opts = dict.get('block_opts', [])
+        self.jinja_args = dict.get('jinja_args', False)
         self.extra_args = dict.get('extra_args', [])
         self.web_description = dict.get('web_description')
 

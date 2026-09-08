@@ -66,8 +66,12 @@ def _get_opts(args):
 def validate_args(playbook, args):
     """Determine if arguments pass a playbook's security policies."""
 
+    l1 = ['{', r'\x7b', r'\u007b', r'\U0000007b']
+    l2 = ['%', r'\x25', r'\u0025', r'\U00000025']
+    JINJA_PATTERNS = [a+b for a in l1 for b in l1+l2]
+
     cmdline = ' '.join(args)
-    if not playbook.jinja and ('{{' in cmdline or '{%' in cmdline):
+    if not playbook.jinja_args and any(x in cmdline for x in JINJA_PATTERNS):
         return False
 
     for opt in _get_opts(args):
