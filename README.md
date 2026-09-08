@@ -58,6 +58,9 @@ environment variables or a `.env` file.
   behind a proxy. Defaults to the origin on which requests for `/run.py` are
   received.
 
+- `AOH_MAX_RUNNERS`: The maximum number of concurrent runners, or `0` for no
+  limit. Defaults to `0`.
+
 - `AOH_PASSWORDS_FILE`: The file containing passwords for password-protected
   playbooks (see below). Defaults to `/aoh/passwords.yml` when running the
   Docker image and `./passwords.yml` otherwise.

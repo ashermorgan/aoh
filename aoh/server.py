@@ -7,6 +7,8 @@ from .playbook import get_playbook
 from .runner import Runner
 from .security import *
 
+_MAX_RUNNERS = int(os.getenv('AOH_MAX_RUNNERS', '0'))
+
 _RUNNERS = {}
 
 # Every 60s, tear down runners that finished more than 60s ago
@@ -52,6 +54,9 @@ def new_runner(path):
 
     if not validate_args(playbook, request.json['args']):
         return {'err': 'Bad or banned arguments passed.'}, 400
+
+    if _MAX_RUNNERS != 0 and len(_RUNNERS) >= _MAX_RUNNERS:
+        return { 'err': 'No runners available.' }, 503
 
     exp_pw_types = get_required_passwords(playbook, request.json['args'])
     act_pws = request.json.get('passwords', {})
