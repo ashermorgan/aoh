@@ -5,8 +5,6 @@ import ansible_runner
 import bcrypt
 import yaml
 
-_PASSWORDS_FILE = os.getenv('AOH_PASSWORDS_FILE', 'passwords.yml')
-
 _CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke
     '--ask-become-pass', '-K',
@@ -14,7 +12,6 @@ _CLI_OPT_WHITELIST = [
     '--ask-vault-password', '--ask-vault-pass', '-J',
     '--check', '-C',
     '--diff', '-D',
-    '--help', '-h',
     '--limit', '-l',
     '--list-tags',
     '--skip-tags',
@@ -25,8 +22,7 @@ _CLI_OPT_WHITELIST = [
 ]
 
 _CLI_OPT_BLACKLIST = [
-    # These options are not supported at all by AoH
-    '--step',               # Interactive
+    '--step', # Interactive, not supported
 ]
 
 _CLI_PASSWORD_OPTS = {
@@ -46,6 +42,8 @@ _CONFIG_PASSWORD_OPTS = {
     'DEFAULT_ASK_VAULT_PASS': 'vault_password',
     'DEFAULT_BECOME_ASK_PASS': 'become_password',
 }
+
+_PASSWORDS_FILE = os.getenv('AOH_PASSWORDS_FILE', 'passwords.yml')
 
 
 def _get_opts(args):

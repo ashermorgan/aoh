@@ -6,7 +6,6 @@ _PLAYBOOKS_FILE = os.getenv('AOH_PLAYBOOKS_FILE', 'playbooks.yml')
 _PLAYBOOKS_DIR = os.path.dirname(_PLAYBOOKS_FILE)
 
 
-
 class PlaybookError(Exception):
     """Raised for AoH playbook configuration errors."""
 

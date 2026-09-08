@@ -22,8 +22,8 @@ PASSWORD_PROMPTS = {
     'vault_password': 'Vault password: ',
 }
 
-# How long to sleep after receiving an empty responses
-WAIT_INTERVAL = 0.1
+# Interval on which to poll the server when there's nothing to do, in seconds
+POLL_INTERVAL = 0.1
 
 
 class ClientError(Exception):
@@ -204,7 +204,7 @@ def exec(args, keep_alive_interval, keep_alive_handler):
             'stderr': (become_stderr + stderr).decode('latin1'),
         }
     except Exception as e:  # noqa: BLE001
-        return { 'err': str(e) }
+        return {'err': str(e)}
 
 
 def put(args):
@@ -214,9 +214,9 @@ def put(args):
         with open(args['dest'], 'wb') as f:
             f.write(base64.b64decode(args['data']))
     except Exception as e:  # noqa: BLE001
-        return { 'err': str(e) }
+        return {'err': str(e)}
     else:
-        return { 'ok': True }
+        return {'ok': True}
 
 
 def fetch(args):
@@ -228,7 +228,7 @@ def fetch(args):
                 'data': base64.b64encode(f.read()).decode(),
             }
     except Exception as e:  # noqa: BLE001
-        return { 'err': str(e) }
+        return {'err': str(e)}
 
 
 def runner_loop(runner_url, cookies):
@@ -243,7 +243,7 @@ def runner_loop(runner_url, cookies):
             keep_alive_handler = lambda res=res: send_message(
                 runner_url,
                 cookies,
-                { 'id': res['id'], 'keep-alive': True },
+                {'id': res['id'], 'keep-alive': True},
                 keep_alive=True
             )
             req = exec(res['exec'], res['keep-alive-interval'],
@@ -257,7 +257,7 @@ def runner_loop(runner_url, cookies):
             req['id'] = res['id']
         else:
             req = {}
-            time.sleep(WAIT_INTERVAL)
+            time.sleep(POLL_INTERVAL)
 
 
 def create_runner(playbook, args):

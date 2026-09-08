@@ -48,10 +48,10 @@ def install():
 def new_runner(path):
     playbook = get_playbook(path)
     if not playbook:
-        return { 'err': f'Playbook not found: {path}' }, 400
+        return {'err': f'Playbook not found: {path}'}, 400
 
     if not validate_args(playbook, request.json['args']):
-        return { 'err': 'Bad or banned arguments passed.' }, 400
+        return {'err': 'Bad or banned arguments passed.'}, 400
 
     exp_pw_types = get_required_passwords(playbook, request.json['args'])
     act_pws = request.json.get('passwords', {})
@@ -64,7 +64,7 @@ def new_runner(path):
         }, 401
 
     if not validate_aoh_password(playbook, act_pws.get('aoh_password')):
-        return { 'err': 'Incorrect AoH password.' }, 401
+        return {'err': 'Incorrect AoH password.'}, 401
     act_pws.pop('aoh_password', None) # Don't pass AoH password on to runner
 
     runner = Runner(playbook, request.json['host'], request.json['args'],

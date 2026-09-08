@@ -1,8 +1,8 @@
 ansible
 ansible_runner
+bcrypt
 flask
 flask-apscheduler
 gunicorn
 python-dotenv
 pyyaml
-bcrypt

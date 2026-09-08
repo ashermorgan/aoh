@@ -1,6 +1,3 @@
-# Copyright: (c) 2026, Asher Morgan <asher@ashermorgan.net>
-# GNU General Public License v3.0+
-
 DOCUMENTATION = """
     name: aoh
     short_description: Run tasks through an Ansible-over-HTTP (AoH) connection
@@ -159,7 +156,7 @@ class Connection(ConnectionBase):
             if not res.get('keep-alive'):
                 return res
 
-            self._send_message_async({ 'id': id, 'keep-alive': True })
+            self._send_message_async({'id': id, 'keep-alive': True})
 
 
     def exec_command(self, cmd: str, in_data: bytes | None = None,
@@ -182,7 +179,7 @@ class Connection(ConnectionBase):
                 'success': self.become.success,
             }
 
-        res = self._send_message_sync({ 'exec': msg })
+        res = self._send_message_sync({'exec': msg})
         if not all(k in res for k in ['returncode', 'stdout', 'stderr']):
             raise AnsibleError('Received invalid AoH EXEC response')
         return (
@@ -219,7 +216,7 @@ class Connection(ConnectionBase):
         display.vvv(f'FETCH {in_path} TO {out_path}',
                     host=self._play_context.remote_addr)
 
-        res = self._send_message_sync({ 'fetch': in_path })
+        res = self._send_message_sync({'fetch': in_path})
         if 'data' not in res:
             raise AnsibleError('Received AoH FETCH response without data')
         try:
