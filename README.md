@@ -62,9 +62,6 @@ environment variables or a `.env` file.
   playbooks (see below). Defaults to `/aoh/passwords.yml` when running the
   Docker image and `./passwords.yml` otherwise.
 
-- `AOH_PLAYBOOKS_DIR`: The default directory to search for playbooks in.
-  Defaults to the directory containing `AOH_PLAYBOOKS_FILE`.
-
 - `AOH_PLAYBOOKS_FILE`: The file containing playbook configuration (see below).
   Defaults to `/aoh/playbooks.yml` when running the Docker image and
   `./playbooks.yml` otherwise.
@@ -80,11 +77,12 @@ which must have the following structure:
 ```yml
 main.yml: # The playbook name
 
-  # The path to the playbook, relative to $AOH_PLAYBOOKS_DIR. Defaults to the
+  # The path to the playbook, relative to $AOH_PLAYBOOKS_FILE. Defaults to the
   # playbook name.
   path: playbooks/playbook.yml
 
-  # The path to an associated Ansible config file, if one exists.
+  # The path to an associated Ansible config file, if one exists, relative to
+  # $AOH_PLAYBOOKS_FILE.
   config: playbooks/ansible.cfg
 
   # The hostname to assign to clients. If omitted or null, each client is

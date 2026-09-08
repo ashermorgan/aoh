@@ -2,8 +2,8 @@ import os
 
 import yaml
 
-PLAYBOOKS_FILE = os.getenv('AOH_PLAYBOOKS_FILE', 'playbooks.yml')
-PLAYBOOKS_DIR = os.getenv('AOH_PLAYBOOKS_DIR', os.path.dirname(PLAYBOOKS_FILE))
+_PLAYBOOKS_FILE = os.getenv('AOH_PLAYBOOKS_FILE', 'playbooks.yml')
+_PLAYBOOKS_DIR = os.path.dirname(_PLAYBOOKS_FILE)
 
 
 
@@ -51,14 +51,14 @@ class Playbook:
         self.extra_args = dict.get('extra_args', [])
         self.web_description = dict.get('web_description')
 
-        self.path = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.path))
-        self.config = os.path.abspath(os.path.join(PLAYBOOKS_DIR, self.config))
+        self.path = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.path))
+        self.config = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.config))
 
 
 def get_playbook(name):
     """Lookup a playbook configuration."""
 
-    with open(PLAYBOOKS_FILE, 'r') as f:
+    with open(_PLAYBOOKS_FILE, 'r') as f:
         CONFIG = yaml.safe_load(f)
         if name in CONFIG:
             return Playbook(name, CONFIG[name])

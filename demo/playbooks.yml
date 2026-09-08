@@ -1,10 +1,11 @@
 main.yml: # The playbook name
 
-  # The path to the playbook, relative to $AOH_PLAYBOOKS_DIR. Defaults to the
+  # The path to the playbook, relative to $AOH_PLAYBOOKS_FILE. Defaults to the
   # playbook name.
   path: playbooks/playbook.yml
 
-  # The path to an associated Ansible config file, if one exists.
+  # The path to an associated Ansible config file, if one exists, relative to
+  # $AOH_PLAYBOOKS_FILE.
   config: playbooks/ansible.cfg
 
   # The hostname to assign to clients. If omitted or null, each client is
