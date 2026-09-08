@@ -147,7 +147,7 @@ class Runner:
         with self._lock:
             if self.id is None:
                 # Runner has already been torn down, probably due to timeout
-                return { 'err': 'Client timeout' }
+                return {'err': 'Runner torn down. Maybe the client timed out?'}
 
             res = {}
 

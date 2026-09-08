@@ -9,7 +9,7 @@ from .security import *
 
 _RUNNERS = {}
 
-# Every 60s, teardown runners that finished more than 60s ago
+# Every 60s, tear down runners that finished more than 60s ago
 _GC_INTERVAL = 60
 _GC_THRESHOLD = 60
 
@@ -22,7 +22,7 @@ scheduler.init_app(app)
 
 @scheduler.task('interval', seconds=_GC_INTERVAL)
 def gc():
-    """Teardown and delete timed-out runners."""
+    """Tear down and delete timed-out runners."""
 
     runners = list(_RUNNERS.items())
     for id, runner in runners:
@@ -82,13 +82,14 @@ def new_runner(path):
 def runner_update(path, short_id):
     id = session.get('runner')
     if not id or not id.startswith(short_id):
-        return { 'err': 'Invalid runner ID' }, 401
+        return {'err': 'Invalid runner ID.'}, 404
 
     runner = _RUNNERS.get(id)
     if not runner:
-        return { 'err': 'Runner not found' }, 404
+        # Runner must have existed at some point, so likely a client timeout
+        return {'err': 'Runner torn down. Maybe the client timed out?'}, 200
     if runner.playbook.name != path:
-        return { 'err': f'Playbook not found: {path}' }, 400
+        return {'err': f'Playbook not found: {path}'}, 400
 
     res = runner.process_message(request.json)
 
