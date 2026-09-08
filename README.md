@@ -4,24 +4,24 @@ Run an Ansible playbook with a single `curl <url> | python` command.
 
 More specifically, this triggers an `ansible-playbook` run on the AoH server,
 with the local client fetching commands for its own tasks over HTTP. This is
-especially useful for machines that are behind a NAT/firewall (thus preventing
-the use of `ansible-playbook` directly), but also either run Windows or aren't
-trusted with full repository access (thus preventing the use of `ansible-pull`).
-For example, AoH can be used to easily install dotfiles on new machines,
-anytime, anywhere.
+especially useful for machines that are behind a NAT or firewall (thus
+preventing the use of `ansible-playbook` directly), but also either run Windows
+or aren't trusted with full repository access (thus preventing the use of
+`ansible-pull`). For example, AoH can be used to easily run a dotfile
+installation playbook on new machines, anytime, anywhere.
 
 
 ## Comparison with Traditional Ansible & Ansible Pull
 
-|                                   | Ansible              | AoH                  | Ansible Pull         |
-| --------------------------------- | -------------------- | -------------------- | -------------------- |
-| Architecture                      | Push                 | Hybrid               | Pull                 |
-| Server requirements               | `ansible-playbook`   | `aoh`                | Any git server       |
-| Client requirements               | `python`             | `python`             | `ansible-pull`       |
-| Controller logic execution        | Server-side          | Server-side          | Client-side          |
-| Client has full repository access | No                   | No                   | Yes                  |
-| Connection method                 | Usually SSH          | HTTP                 | Local connection     |
-| Connection direction              | Server &rarr; client | Client &rarr; server | Client &rarr; server |
+|                                   | Ansible              | AoH                  | Ansible Pull     |
+| --------------------------------- | -------------------- | -------------------- | ---------------- |
+| Architecture                      | Push                 | Hybrid               | Pull             |
+| Server requirements               | `ansible-playbook`   | `aoh`                | Any git server   |
+| Client requirements               | `python`             | `python`             | `ansible-pull`   |
+| Controller logic execution        | Server-side          | Server-side          | Client-side      |
+| Client has full repository access | No                   | No                   | Yes              |
+| Connection method                 | Usually SSH          | HTTP                 | Local connection |
+| Connection direction              | Server &rarr; client | Client &rarr; server | NA               |
 
 
 ## Getting Started
@@ -188,6 +188,10 @@ takes, or can be configured to take, to mitigate security risks.
   clients must not be able to trigger the execution of other hosts' tasks, then
   the `['--limit', 'aoh']` option should be added to `extra_args`. Consider also
   adding these options to `block_opts` to prevent clients from modifying them.
+
+Other recommended security measures include using a reverse proxy to serve AoH
+over HTTPS only, using Ansible Vault to securely store playbook secrets, and
+ensuring that all playbooks are fully trusted and secure.
 
 
 ## Limitations
