@@ -53,13 +53,15 @@ environment variables or a `.env` file.
 - `AOH_DEBUG`: If set to `1`, the AoH server will copy Ansible logs to stdout.
   Defaults to `0`.
 
+- `AOH_LOG_LEVEL`: The AoH logging threshold. Defaults to `ERROR`.
+
+- `AOH_MAX_RUNNERS`: The maximum number of concurrent runners, or `0` for no
+  limit. Defaults to `0`.
+
 - `AOH_ORIGIN`: The origin of the AoH server, as referenced in the `/run.py`
   script (e.g. `https://aoh.example.com:5000`). This must be set if running AoH
   behind a proxy. Defaults to the origin on which requests for `/run.py` are
   received.
-
-- `AOH_MAX_RUNNERS`: The maximum number of concurrent runners, or `0` for no
-  limit. Defaults to `0`.
 
 - `AOH_PASSWORDS_FILE`: The file containing passwords for password-protected
   playbooks (see below). Defaults to `/aoh/passwords.yml` when running the

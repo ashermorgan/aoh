@@ -1,11 +1,12 @@
+import logging
 import os
 
 from flask import Flask, abort, render_template, request, session
 from flask_apscheduler import APScheduler
 
 from .config import AOH_MAX_RUNNERS, AOH_ORIGIN
-from .playbook import get_playbook
-from .runner import Runner
+from .playbook import PlaybookError, get_playbook
+from .runner import Runner, RunnerError
 from .security import *
 
 _RUNNERS = {}
@@ -20,6 +21,8 @@ app.secret_key = os.urandom(16)
 scheduler = APScheduler()
 scheduler.init_app(app)
 
+logger = logging.getLogger(__name__)
+
 
 @scheduler.task('interval', seconds=_GC_INTERVAL)
 def gc():
@@ -28,6 +31,8 @@ def gc():
     runners = list(_RUNNERS.items())
     for id, runner in runners:
         if runner and runner.has_timed_out(_GC_THRESHOLD):
+            logger.info(f'{runner.playbook.name} (#{id[:8]}): Runner torn down '
+                        'due to inactivity.')
             runner.teardown()
             _RUNNERS.pop(id, None)
 
@@ -37,6 +42,13 @@ def inject_stage_and_region():
     return {
         'AOH_ORIGIN': AOH_ORIGIN or request.host_url[:-1]
     }
+
+
+@app.errorhandler(RunnerError)
+@app.errorhandler(PlaybookError)
+def error(e):
+    logger.error(e)
+    return {'msg': 'Internal server error'}, 500
 
 
 @app.get('/run')
@@ -51,10 +63,8 @@ def new_runner(path):
     if not playbook:
         return {'err': f'Playbook not found: {path}'}, 400
 
-    if not validate_args(playbook, request.json['args']):
-        return {'err': 'Bad or banned arguments passed.'}, 400
-
     if AOH_MAX_RUNNERS != 0 and len(_RUNNERS) >= AOH_MAX_RUNNERS:
+        logger.info(f'{path}: No runners available.')
         return { 'err': 'No runners available.' }, 503
 
     exp_pw_types = get_required_passwords(playbook, request.json['args'])
@@ -68,8 +78,13 @@ def new_runner(path):
         }, 401
 
     if not validate_aoh_password(playbook, act_pws.get('aoh_password')):
+        logger.info(f'{path}: Received incorrect password.')
         return {'err': 'Incorrect AoH password.'}, 401
     act_pws.pop('aoh_password', None) # Don't pass AoH password on to runner
+
+    if not validate_args(playbook, request.json['args']):
+        logger.info(f"{path}: Received bad arguments: {request.json['args']}")
+        return {'err': 'Bad or banned arguments passed.'}, 400
 
     runner = Runner(playbook, request.json['host'], request.json['args'],
                     act_pws)
@@ -77,7 +92,9 @@ def new_runner(path):
     assert runner.id is not None
     _RUNNERS[runner.id] = runner
     session['runner'] = runner.id
-    short_id = runner.id.split('-')[0]
+    short_id = runner.id[:8]
+
+    logger.info(f'{path} (#{short_id}): Created runner.')
 
     return {}, 201, {'Location': f'/runners/{path}/{short_id}'}
 
@@ -95,9 +112,12 @@ def runner_update(path, short_id):
     if runner.playbook.name != path:
         return {'err': f'Playbook not found: {path}'}, 400
 
+    logger.debug(f'{path} (#{short_id}): Received client message.')
     res = runner.process_message(request.json)
 
     if res['finished']:
+        logger.info(f'{runner.playbook.name} (#{short_id}): Runner torn down '
+                    'due to completion.')
         runner.teardown()
         _RUNNERS.pop(id, None)
 

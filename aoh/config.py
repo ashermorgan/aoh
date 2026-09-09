@@ -10,6 +10,8 @@ load_dotenv()
 
 AOH_DEBUG = (os.getenv('AOH_DEBUG', '0') == '1')
 
+AOH_LOG_LEVEL = os.getenv('AOH_LOG_LEVEL', 'ERROR')
+
 try:
     AOH_MAX_RUNNERS = int(os.getenv('AOH_MAX_RUNNERS', '0'))
 except ValueError:
