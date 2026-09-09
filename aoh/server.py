@@ -131,5 +131,7 @@ def web(path='main.yml'):
     if not playbook or playbook.web_description is None:
         return abort(404)
 
+    is_windows = 'indows' in request.headers.get('User-Agent', '')
+
     return render_template('home.html', description=playbook.web_description,
-                           playbook=playbook.name)
+                           playbook=playbook.name, is_windows=is_windows)

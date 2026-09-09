@@ -18,12 +18,22 @@
             <h1>{{ description }}</h1>
             {% endif %}
 
-            {% set cmd = 'curl %s/run | python3' % AOH_ORIGIN %}
+            {% if is_windows %}
+            {% set cmd = '(Invoke-WebRequest %s/run).Content' % AOH_ORIGIN %}
+            {% else %}
+            {% set cmd = 'curl %s/run' % AOH_ORIGIN %}
+            {% endif %}
+
+            {% set cmd = cmd + ' | python3' %}
+
             {% if playbook != 'main.yml' %}
             {% set cmd = cmd + ' - %s' % playbook %}
             {% endif %}
+
             <div id="cmd-bar">
-                <code id="cmd">{{ cmd }}</code>
+                <code id="cmd" class="{% if is_windows %}win{% endif %}">
+                    {{ cmd }}
+                </code>
                 <button id="copy" onclick="copy('{{ cmd }}')" hidden></button>
             </div>
         </main>

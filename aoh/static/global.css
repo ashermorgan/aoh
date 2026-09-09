@@ -43,8 +43,6 @@ main {
 h1 {
     margin-bottom: 2rem;
 
-    color: var(--fg2);
-
     font-size: 2rem;
     font-weight: 100;
     text-align: center;
@@ -71,7 +69,13 @@ h1 {
     font-family: 'Menlo', 'Cascadia Code', 'Lucida Console', monospace;
 }
 #cmd::before {
+    color: var(--fg2);
+}
+#cmd:not(.win)::before {
     content: '$ ';
+}
+#cmd.win::before {
+    content: 'PS> ';
 }
 
 /* Command copy button */
@@ -93,5 +97,5 @@ h1 {
     width: 100%;
     height: 100%;
 
-    color: var(--fg1);
+    color: var(--fg2);
 }
