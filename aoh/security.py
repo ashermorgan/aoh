@@ -1,10 +1,8 @@
-import tempfile
-
-import ansible_runner
 import bcrypt
 import yaml
 
 from .config import AOH_PASSWORDS_FILE
+from .runner import get_config_values
 
 _CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke
@@ -92,21 +90,10 @@ def get_required_passwords(playbook, args):
         if opt in opts:
             pw_types.add(pw_type)
 
-    with tempfile.TemporaryDirectory(prefix='aoh-') as dir:
-        raw_config = ansible_runner.get_ansible_config(
-            'dump',
-            playbook.config,
-            private_data_dir=dir,
-            quiet=True,
-        )[0]
-
-        for opt, pw_type in _CONFIG_PASSWORD_OPTS.items():
-            val = eval(next(
-                x for x in raw_config.split('\n')
-                if x.startswith(opt)
-            ).split('= ')[1])
-            if val:
-                pw_types.add(pw_type)
+    opts = get_config_values(playbook.config, _CONFIG_PASSWORD_OPTS.keys())
+    for opt, pw_type in _CONFIG_PASSWORD_OPTS.items():
+        if opts[opt]:
+            pw_types.add(pw_type)
 
     return list(pw_types)
 

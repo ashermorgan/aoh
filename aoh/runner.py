@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import shlex
@@ -22,6 +23,33 @@ _PASSWORD_PROMPTS = {
 
 class RunnerError(Exception):
     """Raised for AoH runner errors."""
+
+
+def get_config_values(config, keys):
+    """Query Ansible config option values."""
+
+    with tempfile.TemporaryDirectory(prefix='aoh-') as dir:
+        raw_config = ansible_runner.get_ansible_config(
+            'dump',
+            config,
+            private_data_dir=dir,
+            quiet=True,
+        )[0]
+
+        if not raw_config:
+            raise RunnerError(f'Failed to dump Ansible config from {config}')
+
+        result = {}
+        for key in keys:
+            line = next((
+                x for x in raw_config.split('\n')
+                if x.startswith(key + '(')
+            ), None)
+            if not line:
+                raise RunnerError(f'Ansible config key "{key}" not found')
+            result[key] = ast.literal_eval(line.split('=')[1])
+
+        return result
 
 
 class Runner:
@@ -77,30 +105,21 @@ class Runner:
             f.write(f'[aoh]\n{self.host} ansible_connection=aoh\n')
             f.writelines(f'[{g}]\n{self.host}\n' for g in self.playbook.groups)
 
-        raw_config = ansible_runner.get_ansible_config(
-            'dump',
+        config = get_config_values(
             self.playbook.config,
-            private_data_dir=self._DIR,
-            quiet=True,
-        )[0]
-        connection_plugins = eval(next(
-            x for x in raw_config.split('\n')
-            if x.startswith('DEFAULT_CONNECTION_PLUGIN_PATH')
-        ).split('= ')[1])
-        inventory = eval(next(
-            x for x in raw_config.split('\n')
-            if x.startswith('DEFAULT_HOST_LIST')
-        ).split('= ')[1])
+            ['DEFAULT_CONNECTION_PLUGIN_PATH', 'DEFAULT_HOST_LIST']
+        )
 
         env = {
             'ANSIBLE_AOH_DIR': self._DIR,
             'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
-                [_CONNECTION_PLUGIN_DIR] + connection_plugins
+                [_CONNECTION_PLUGIN_DIR] +
+                config['DEFAULT_CONNECTION_PLUGIN_PATH']
             ),
             'ANSIBLE_CONFIG': self.playbook.config,
             'ANSIBLE_FORCE_COLOR': '1',
             'ANSIBLE_INVENTORY': ','.join(
-                [f'{self._DIR}/inventory.ini'] + inventory
+                [f'{self._DIR}/inventory.ini'] + config['DEFAULT_HOST_LIST']
             ),
         }
         pw_prompt_answers = {}
