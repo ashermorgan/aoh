@@ -1,9 +1,10 @@
-import os
 import tempfile
 
 import ansible_runner
 import bcrypt
 import yaml
+
+from .config import AOH_PASSWORDS_FILE
 
 _CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke
@@ -42,8 +43,6 @@ _CONFIG_PASSWORD_OPTS = {
     'DEFAULT_ASK_VAULT_PASS': 'vault_password',
     'DEFAULT_BECOME_ASK_PASS': 'become_password',
 }
-
-_PASSWORDS_FILE = os.getenv('AOH_PASSWORDS_FILE', 'passwords.yml')
 
 
 def _get_opts(args):
@@ -120,6 +119,6 @@ def validate_aoh_password(playbook, password):
     if password is None:
         return False
 
-    with open(_PASSWORDS_FILE, 'r') as f:
+    with open(AOH_PASSWORDS_FILE, 'r') as f:
         hash = yaml.safe_load(f).get(playbook.name)
         return bcrypt.checkpw(password.encode(), hash.encode())

@@ -2,8 +2,9 @@ import os
 
 import yaml
 
-_PLAYBOOKS_FILE = os.getenv('AOH_PLAYBOOKS_FILE', 'playbooks.yml')
-_PLAYBOOKS_DIR = os.path.dirname(_PLAYBOOKS_FILE)
+from .config import AOH_PLAYBOOKS_FILE
+
+_PLAYBOOKS_DIR = os.path.dirname(AOH_PLAYBOOKS_FILE)
 
 
 class PlaybookError(Exception):
@@ -57,7 +58,7 @@ class Playbook:
 def get_playbook(name):
     """Lookup a playbook configuration."""
 
-    with open(_PLAYBOOKS_FILE, 'r') as f:
+    with open(AOH_PLAYBOOKS_FILE, 'r') as f:
         CONFIG = yaml.safe_load(f)
         if name in CONFIG:
             return Playbook(name, CONFIG[name])

@@ -3,11 +3,10 @@ import os
 from flask import Flask, abort, render_template, request, session
 from flask_apscheduler import APScheduler
 
+from .config import AOH_MAX_RUNNERS, AOH_ORIGIN
 from .playbook import get_playbook
 from .runner import Runner
 from .security import *
-
-_MAX_RUNNERS = int(os.getenv('AOH_MAX_RUNNERS', '0'))
 
 _RUNNERS = {}
 
@@ -36,7 +35,7 @@ def gc():
 @app.context_processor
 def inject_stage_and_region():
     return {
-        'AOH_ORIGIN': os.getenv('AOH_ORIGIN', request.host_url[:-1])
+        'AOH_ORIGIN': AOH_ORIGIN or request.host_url[:-1]
     }
 
 
@@ -55,7 +54,7 @@ def new_runner(path):
     if not validate_args(playbook, request.json['args']):
         return {'err': 'Bad or banned arguments passed.'}, 400
 
-    if _MAX_RUNNERS != 0 and len(_RUNNERS) >= _MAX_RUNNERS:
+    if AOH_MAX_RUNNERS != 0 and len(_RUNNERS) >= AOH_MAX_RUNNERS:
         return { 'err': 'No runners available.' }, 503
 
     exp_pw_types = get_required_passwords(playbook, request.json['args'])

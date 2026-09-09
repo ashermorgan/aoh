@@ -9,7 +9,7 @@ import uuid
 
 import ansible_runner
 
-_AOH_DEBUG = (os.getenv('AOH_DEBUG', '0') == '1')
+from .config import AOH_DEBUG
 
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 
@@ -121,7 +121,7 @@ class Runner:
             passwords=pw_prompt_answers,
             playbook=self.playbook.path,
             finished_callback=_finished_callback,
-            quiet=not _AOH_DEBUG,
+            quiet=not AOH_DEBUG,
             suppress_env_files=True,
         )
 
