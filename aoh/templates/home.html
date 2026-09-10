@@ -34,7 +34,9 @@
                 <code id="cmd" class="{% if is_windows %}win{% endif %}">
                     {{ cmd }}
                 </code>
-                <button id="copy" onclick="copy('{{ cmd }}')" hidden></button>
+                <button id="copy" aria-label="Copy command" hidden
+                    onclick="copy('{{ cmd }}')">
+                </button>
             </div>
         </main>
     </body>
