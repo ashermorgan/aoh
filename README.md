@@ -114,14 +114,22 @@ main.yml: # The playbook name
   output: true
 
   # The ansible-playbooks options that users are allowed to invoke. Short and
-  # long option forms must be specified separately. A reasonable set of safe
-  # options are allowed by default, see aoh/security.py.
+  # long option forms must be specified separately. The following options are
+  # allowed by default:
+  #   --ask-become-pass / -K
+  #   --ask-pass / -k
+  #   --ask-vault-password / --ask-vault-pass / -J
+  #   --check / -C
+  #   --diff / -D
+  #   --list-tags
+  #   --skip-tags
+  #   --start-at-task
+  #   --tags / -t
   allow_opts:
     - '--become-method'
 
-  # A list of ansible-playbook options that users are not allowed to invoke.
-  # This overrides the default allowed options and the options specified in
-  # allow_opts. Some options are always blocked, see aoh/security.py.
+  # A list of ansible-playbook options that users are not allowed to invoke,
+  # overriding the default allowed options.
   block_opts:
     - '--list-tags'
 

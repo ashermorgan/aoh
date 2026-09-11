@@ -3,6 +3,7 @@ import os
 import yaml
 
 from .config import AOH_PLAYBOOKS_FILE
+from .security import CLI_OPT_BLACKLIST
 
 _PLAYBOOKS_DIR = os.path.dirname(AOH_PLAYBOOKS_FILE)
 
@@ -64,6 +65,14 @@ class Playbook:
             if '--limit' in self.extra_args or '-l' in self.extra_args:
                 raise PlaybookError('extra_args cannot contain "--limit" if '
                                     'limit is true')
+
+        for opt in CLI_OPT_BLACKLIST:
+            if opt in self.allow_opts:
+                raise PlaybookError(f'The "{opt}" option is not supported and '
+                                    'cannot be included in allow_opts')
+            if opt in self.extra_args:
+                raise PlaybookError(f'The "{opt}" option is not supported and '
+                                    'cannot be included in extra_args')
 
 
 def get_playbook(name):

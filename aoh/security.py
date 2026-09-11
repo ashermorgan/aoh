@@ -4,7 +4,7 @@ import yaml
 from .config import AOH_PASSWORDS_FILE
 from .runner import get_config_values
 
-_CLI_OPT_WHITELIST = [
+CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke
     '--ask-become-pass', '-K',
     '--ask-pass', '-k',
@@ -15,11 +15,11 @@ _CLI_OPT_WHITELIST = [
     '--skip-tags',
     '--start-at-task',
     '--tags', '-t',
-    '--verbose', '-v',
-    '--version',
+
+    # New entries should also be added to README.md
 ]
 
-_CLI_OPT_BLACKLIST = [
+CLI_OPT_BLACKLIST = [
     '--step', # Interactive, not supported
 ]
 
@@ -69,8 +69,8 @@ def validate_args(playbook, args):
         return False
 
     for opt in _get_opts(args):
-        if (not (opt in _CLI_OPT_WHITELIST or opt in playbook.allow_opts) or
-                (opt in _CLI_OPT_BLACKLIST or opt in playbook.block_opts)):
+        if (not (opt in CLI_OPT_WHITELIST or opt in playbook.allow_opts) or
+                (opt in CLI_OPT_BLACKLIST or opt in playbook.block_opts)):
             return False
 
     return True
