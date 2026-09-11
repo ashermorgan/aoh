@@ -20,6 +20,7 @@ class Playbook:
             'config': str,
             'host': str,
             'groups': list,
+            'limit': bool,
             'password': bool,
             'output': bool,
             'allow_opts': list,
@@ -43,6 +44,7 @@ class Playbook:
         self.config = dict.get('config', None)
         self.host = dict.get('host')
         self.groups = dict.get('groups', [])
+        self.limit = dict.get('limit', True)
         self.password = dict.get('password', False)
         self.output = dict.get('output', True)
         self.allow_opts = dict.get('allow_opts', [])
@@ -53,6 +55,15 @@ class Playbook:
 
         self.path = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.path))
         self.config = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.config))
+
+
+        if self.limit:
+            if '--limit' in self.allow_opts or '-l' in self.allow_opts:
+                raise PlaybookError('allow_opts cannot contain "--limit" if '
+                                    'limit is true')
+            if '--limit' in self.extra_args or '-l' in self.extra_args:
+                raise PlaybookError('extra_args cannot contain "--limit" if '
+                                    'limit is true')
 
 
 def get_playbook(name):

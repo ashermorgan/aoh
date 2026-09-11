@@ -137,6 +137,7 @@ class Runner:
             ident=self.id,
             envvars=env,
             cmdline=cmdline,
+            limit=self.playbook.host if self.playbook.limit else None,
             passwords=pw_prompt_answers,
             playbook=self.playbook.path,
             finished_callback=_finished_callback,

@@ -100,6 +100,11 @@ main.yml: # The playbook name
     - group1
     - group2
 
+  # Whether to restrict play execution to the AoH client using
+  # ansible-playbook's --limit option. If enabled, the --limit option must not
+  # be present in allow_opts or extra_args. Defaults to true.
+  limit: true
+
   # Whether to require a password to execute the playbook. Passwords must be
   # specified separately in the $AOH_PASSWORDS_FILE file (see below). Defaults
   # to false.
