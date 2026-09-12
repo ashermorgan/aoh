@@ -42,6 +42,10 @@ _CONFIG_PASSWORD_OPTS = {
 }
 
 
+class PasswordFileError(Exception):
+    """Raised for AoH password configuration errors."""
+
+
 def _get_opts(args):
     """Identify options present in a list of CLI arguments."""
 
@@ -106,5 +110,21 @@ def validate_aoh_password(playbook, password):
         return False
 
     with open(AOH_PASSWORDS_FILE, 'r') as f:
-        hash = yaml.safe_load(f).get(playbook.name)
-        return bcrypt.checkpw(password.encode(), hash.encode())
+        try:
+            PASSWORDS = yaml.safe_load(f)
+        except yaml.YAMLError:
+            raise PasswordFileError('Failed to parse $AOH_PASSWORDS_FILE')
+
+        if type(PASSWORDS) != dict:
+            raise PasswordFileError('$AOH_PASSWORDS_FILE must contain a '
+                                    'dictionary of password hashes')
+        hash = PASSWORDS.get(playbook.name)
+        if hash is None:
+            raise PasswordFileError('Password hash not found')
+        if type(hash) != str:
+            raise PasswordFileError('Password hashes must be of type str')
+
+        try:
+            return bcrypt.checkpw(password.encode(), hash.encode())
+        except ValueError:
+            raise PasswordFileError('Invalid bcrypt hash')

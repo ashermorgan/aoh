@@ -8,7 +8,7 @@ from aoh.security import CLI_OPT_BLACKLIST
 _PLAYBOOKS_DIR = os.path.dirname(AOH_PLAYBOOKS_FILE)
 
 
-class PlaybookError(Exception):
+class PlaybookFileError(Exception):
     """Raised for AoH playbook configuration errors."""
 
 
@@ -34,11 +34,12 @@ class Playbook:
         for key, _type in _types.items():
             if key in dict:
                 if type(dict[key]) != _type:
-                    raise PlaybookError(f'"{key}" field must be of type '
-                                        f'{_type}')
+                    raise PlaybookFileError(f'"{key}" field must be of type '
+                                            f'{_type}')
 
                 if  _type is list and any(type(x) != str for x in dict[key]):
-                    raise PlaybookError(f'"{key}" elements must be of type str')
+                    raise PlaybookFileError(f'"{key}" elements must be of type '
+                                            'str')
 
         self.name = name
         self.path = dict.get('path', name)
@@ -55,32 +56,41 @@ class Playbook:
         self.web_description = dict.get('web_description')
 
         self.path = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.path))
-        self.config = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.config))
+        if self.config:
+            self.config = os.path.abspath(os.path.join(_PLAYBOOKS_DIR,
+                                                       self.config))
 
 
         if self.limit:
             if '--limit' in self.allow_opts or '-l' in self.allow_opts:
-                raise PlaybookError('allow_opts cannot contain "--limit" if '
-                                    'limit is true')
+                raise PlaybookFileError('allow_opts cannot contain "--limit" '
+                                        'if limit is true')
             if '--limit' in self.extra_args or '-l' in self.extra_args:
-                raise PlaybookError('extra_args cannot contain "--limit" if '
-                                    'limit is true')
+                raise PlaybookFileError('extra_args cannot contain "--limit" '
+                                        'if limit is true')
 
         for opt in CLI_OPT_BLACKLIST:
             if opt in self.allow_opts:
-                raise PlaybookError(f'The "{opt}" option is not supported and '
-                                    'cannot be included in allow_opts')
+                raise PlaybookFileError(f'The "{opt}" option is not supported '
+                                        'and cannot be included in allow_opts')
             if opt in self.extra_args:
-                raise PlaybookError(f'The "{opt}" option is not supported and '
-                                    'cannot be included in extra_args')
+                raise PlaybookFileError(f'The "{opt}" option is not supported '
+                                        'and cannot be included in extra_args')
 
 
 def get_playbook(name):
     """Lookup a playbook configuration."""
 
     with open(AOH_PLAYBOOKS_FILE, 'r') as f:
-        CONFIG = yaml.safe_load(f)
-        if name in CONFIG:
-            return Playbook(name, CONFIG[name])
+        try:
+            PLAYBOOKS = yaml.safe_load(f)
+        except yaml.YAMLError:
+            raise PlaybookFileError('Failed to parse $AOH_PLAYBOOKS_FILE')
+
+        if type(PLAYBOOKS) != dict:
+            raise PlaybookFileError('$AOH_PASSWORDS_FILE must contain a '
+                                    'dictionary of playbook entries')
+        if name in PLAYBOOKS:
+            return Playbook(name, PLAYBOOKS[name] or {})
         else:
             return None
