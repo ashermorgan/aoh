@@ -2,8 +2,8 @@ import os
 
 import yaml
 
-from .config import AOH_PLAYBOOKS_FILE
-from .security import CLI_OPT_BLACKLIST
+from aoh.config import AOH_PLAYBOOKS_FILE
+from aoh.security import CLI_OPT_BLACKLIST
 
 _PLAYBOOKS_DIR = os.path.dirname(AOH_PLAYBOOKS_FILE)
 

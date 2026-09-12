@@ -1,8 +1,8 @@
 import bcrypt
 import yaml
 
-from .config import AOH_PASSWORDS_FILE
-from .runner import get_config_values
+from aoh.config import AOH_PASSWORDS_FILE
+from aoh.runner import get_config_values
 
 CLI_OPT_WHITELIST = [
     # These options should be safe for clients to invoke

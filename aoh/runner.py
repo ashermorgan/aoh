@@ -10,7 +10,7 @@ import uuid
 
 import ansible_runner
 
-from .config import AOH_DEBUG
+from aoh.config import AOH_DEBUG
 
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 
