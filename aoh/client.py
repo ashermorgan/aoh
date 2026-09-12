@@ -296,8 +296,11 @@ def cli(args):
     if '-h' in args or '--help' in args:
         if len(args) >= 1 and args[0] != '-':
             prog = args[0]
+        elif sys.platform == 'win32':
+            prog = f'(Invoke-WebRequest {AOH_ORIGIN}/run).Content | ' \
+                   f'{os.path.basename(sys.executable)} -'
         else:
-            prog = f'curl {AOH_ORIGIN}/run | ' \
+            prog = f'curl -s {AOH_ORIGIN}/run | ' \
                    f'{os.path.basename(sys.executable)} -'
 
         print(f'Usage: {prog} [-h] [<playbook>] [<opts>...]')
