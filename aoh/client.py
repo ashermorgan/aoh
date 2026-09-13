@@ -223,7 +223,7 @@ def fetch(args):
     """Fetch a file from the local host."""
 
     try:
-        with open(args['dest'], 'rb') as f:
+        with open(args, 'rb') as f:
             return {
                 'data': base64.b64encode(f.read()).decode(),
             }
