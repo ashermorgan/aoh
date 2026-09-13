@@ -1,6 +1,6 @@
 # AoH: Ansible-over-HTTP
 
-Run an Ansible playbook with a single `curl <url> | python` command.
+Run an Ansible playbook with a single `curl <aoh server url> | python` command.
 
 More specifically, this triggers an `ansible-playbook` run on the AoH server,
 with the local client fetching commands for its own tasks over HTTP. This is
@@ -13,109 +13,176 @@ installation playbook on new machines, anytime, anywhere.
 
 ## Comparison with Traditional Ansible & Ansible Pull
 
-|                                   | Ansible              | AoH                  | Ansible Pull     |
-| --------------------------------- | -------------------- | -------------------- | ---------------- |
-| Architecture                      | Push                 | Hybrid               | Pull             |
-| Server requirements               | `ansible-playbook`   | `aoh`                | Any git server   |
-| Client requirements               | `python`             | `python`             | `ansible-pull`   |
-| Controller logic execution        | Server-side          | Server-side          | Client-side      |
-| Client has full repository access | No                   | No                   | Yes              |
-| Connection method                 | Usually SSH          | HTTP                 | Local connection |
-| Connection direction              | Server &rarr; client | Client &rarr; server | NA               |
+|                                   | Ansible            | AoH         | Ansible Pull     |
+| --------------------------------- | ------------------ | ----------- | ---------------- |
+| Architecture                      | Push               | Pull        | Pull             |
+| Server requirements               | `ansible-playbook` | `aoh`       | Any git server   |
+| Client requirements               | `python`           | `python`    | `ansible-pull`   |
+| Ansible controller                | Server             | Server      | Client           |
+| Client has full repository access | No                 | No          | Yes              |
+| Connection method                 | Usually SSH        | HTTP        | Local connection |
+
+Note that Ansible controllers don't support Windows, so the `ansible-playbook`,
+`aoh`, and `ansible-pull` programs all must be run on a Unix-based system.
 
 
 ## Getting Started
 
-The AoH server is packaged as a Docker image. You can quickly try it out with
-the following commands:
+First, build and run the AoH server docker image.
 
-```sh
-# Build and run the server docker image:
-docker build -t aoh .
-docker run --rm --detach --name aoh -p 8000:8000 -v ./demo:/aoh aoh
-
-# Run the client CLI (the demo AoH password is "hunter2")
-curl -s 127.0.0.1:8000/run | python3
-curl -s 127.0.0.1:8000/run | python3 - --help
-
-# Stop the server docker container
-docker stop aoh
 ```
+$ docker build -t aoh .
+$ docker run --rm --detach --name aoh -p 8000:8000 -v ./demo:/aoh aoh
+```
+
+Next, run the [demo playbook](demo/my-playbook.yml) via the client Python
+script. The demo AoH password is `hunter2`.
+
+```
+$ curl -s 127.0.0.1:8000/run | python3
+AoH password:
+
+PLAY [Demo play] ***************************************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [my-host]
+
+TASK [Write message to ~/aoh-demo.txt] *****************************************
+--- before
++++ after: /home/me/.ansible/tmp/ansible-local-23520hhz8owqd/tmpddlm2qex/message.j2
+@@ -0,0 +1,8 @@
++Welcome to AoH!
++
++The server is running this playbook with ansible-playbook, and your client is
++fetching commands for its own tasks over HTTP.
++
++Username: me
++Hostname: my-host
++Timestamp: 2026-09-12 22:58:10 UTC
+
+changed: [my-host]
+
+PLAY RECAP *********************************************************************
+my-host                    : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+
+Clients can pass options to control which playbook is executed and what
+`ansible-playbook` arguments are used. Use the `--help` flag to view the CLI
+syntax.
+
+```
+$ curl -s 127.0.0.1:8000/run | python3 - --help
+Usage: curl -s http://127.0.0.1:8000/run | python3 - [-h] [<playbook>] [<opts>...]
+
+Runs Ansible playbooks on a remote server and fetches commands for the local
+host's tasks over HTTP.
+
+Arguments:
+  playbook          The name of the playbook to run (defaults to "main.yml")
+
+Options:
+  -h, --help        Show this help message and exit
+  <opts>            Any (server-approved) ansible-playbook(1) options
+```
+
+Windows clients are also supported. Just use `Invoke-WebRequest` instead of
+`curl`.
+
+```
+PS> (Invoke-WebRequest http://<server IP>:8000).Content | python
+```
+
+Finally, stop the AoH server when you're done using it.
+
+```
+$ docker stop aoh
+```
+
+Next steps for deploying AoH include:
+
+- Copy your own Ansible playbooks to the server
+- Update the `playbooks.yml` and `passwords.yml` files that are mounted under
+  `/aoh/` (see the [playbooks](#playbooks) and [playbook
+  passwords](#playbook-passwords) sections for reference)
+- Apply the recommended [security measures](#security)
 
 
 ## Configuration
 
 ### Environment Variables
 
-AoH supports the following configuration options, specified either via
-environment variables or a `.env` file.
+AoH supports the following configuration options, which are set via environment
+variables.
 
-- `AOH_DEBUG`: If set to `1`, the AoH server will copy Ansible logs to stdout.
-  Defaults to `0`.
+- `AOH_DEBUG`: If set to `1`, the AoH server will copy `ansible-playbook` output
+  to the server's stdout. Defaults to `0`.
 
-- `AOH_LOG_LEVEL`: The AoH logging threshold. Defaults to `ERROR`.
+- `AOH_LOG_LEVEL`: The threshold for AoH logs, which are written to the server's
+  stdout. Must be one of `CRITICAL`, `ERROR`, `WARNING`, `INFO`, or `DEBUG`.
+  Defaults to `ERROR`.
 
-- `AOH_MAX_RUNNERS`: The maximum number of concurrent runners, or `0` for no
-  limit. Defaults to `0`.
+- `AOH_MAX_RUNNERS`: The maximum number of concurrent `ansible-playbook`
+  sessions, or `0` for no limit. Defaults to `0`.
 
-- `AOH_ORIGIN`: The origin of the AoH server, as referenced in the `/run.py`
-  script (e.g. `https://aoh.example.com:5000`). This must be set if running AoH
-  behind a proxy. Defaults to the origin on which requests for `/run.py` are
-  received.
+- `AOH_ORIGIN`: The origin of the AoH server (e.g.
+  `https://aoh.example.com:5000`). This must be set if AoH is running behind a
+  reverse proxy. Defaults to the origin on which requests are received.
 
 - `AOH_PASSWORDS_FILE`: The file containing passwords for password-protected
-  playbooks (see below). Defaults to `/aoh/passwords.yml` when running the
-  Docker image and `./passwords.yml` otherwise.
+  playbooks (see the [playbook passwords](#playbook-passwords) section below).
+  Defaults to `/aoh/passwords.yml` when running the Docker image and
+  `./passwords.yml` otherwise.
 
-- `AOH_PLAYBOOKS_FILE`: The file containing playbook configuration (see below).
-  Defaults to `/aoh/playbooks.yml` when running the Docker image and
-  `./playbooks.yml` otherwise.
+- `AOH_PLAYBOOKS_FILE`: The file containing playbook configuration (see the
+  [playbooks](#playbooks) section below). Defaults to `/aoh/playbooks.yml` when
+  running the Docker image and `./playbooks.yml` otherwise.
 
 
 ### Playbooks
 
-AoH only executes playbooks that are listed in the `$AOH_PLAYBOOKS_FILE` file,
-which must have the following structure:
+AoH only executes playbooks that are listed in the file specified by
+the `$AOH_PLAYBOOKS_FILE` option. This file must have the following structure:
 
 <!-- EXAMPLE COPIED FROM demo/playbooks.yml: -->
 
 ```yml
 main.yml: # The playbook name
 
-  # The path to the playbook, relative to $AOH_PLAYBOOKS_FILE. Defaults to the
-  # playbook name.
-  path: playbooks/playbook.yml
+  # The path to the playbook. Relative paths are interpreted as relative to
+  # $AOH_PLAYBOOKS_FILE. Defaults to the playbook name.
+  path: my-playbook.yml
 
-  # The path to an associated Ansible config file, if one exists, relative to
-  # $AOH_PLAYBOOKS_FILE.
-  config: playbooks/ansible.cfg
+  # The path to an associated Ansible config file, if one exists. Relative paths
+  # are interpreted as relative to $AOH_PLAYBOOKS_FILE.
+  config: ansible.cfg
 
-  # The hostname to assign to clients. If omitted or null, each client is
-  # assigned the hostname that it reports for itself.
-  host: my-aoh-host
+  # The hostname to assign to clients. If set to null, clients are assigned the
+  # hostname that they report for themselves, which could be spoofed. Defaults
+  # to null.
+  host: my-host
 
-  # The groups to assign to clients, in addition to the aoh group and any groups
-  # defined in inventory files.
+  # The groups to assign to clients, in addition to the "aoh" group and any
+  # groups defined in inventory files.
   groups:
     - group1
     - group2
 
-  # Whether to restrict play execution to the AoH client using
+  # Whether to restrict play execution to the AoH client only using
   # ansible-playbook's --limit option. If enabled, the --limit option must not
   # be present in allow_opts or extra_args. Defaults to true.
   limit: true
 
   # Whether to require a password to execute the playbook. Passwords must be
-  # specified separately in the $AOH_PASSWORDS_FILE file (see below). Defaults
-  # to false.
+  # specified separately in the $AOH_PASSWORDS_FILE file (see the playbook
+  # passwords section below). Defaults to false.
   password: true
 
-  # Whether to print Ansible output on the client. Defaults to true.
+  # Whether ansible-playbook output is sent to the client. Defaults to true.
   output: true
 
-  # The ansible-playbooks options that users are allowed to invoke. Short and
-  # long option forms must be specified separately. The following options are
-  # allowed by default:
+  # A list of ansible-playbooks options that users are allowed to invoke. Short
+  # and long option forms must be specified separately. The following options
+  # are allowed by default:
   #   --ask-become-pass / -K
   #   --ask-pass / -k
   #   --ask-vault-password / --ask-vault-pass / -J
@@ -135,22 +202,26 @@ main.yml: # The playbook name
 
   # Whether to allow clients to use Jinja expressions in ansible-playbook
   # arguments. Defaults to false.
-  jinja_args: true
+  jinja_args: false
 
-  # Additional raw ansible-playbook options
+  # A list of additional arguments to pass to ansible-playbook. These are not
+  # subject to the allow_opts/block_opts/jinja_args restrictions.
   extra_args:
     - '--diff'
 
-  # The description displayed on the playbook web page. Defaults to null, which
-  # disables the playbook web page.
+  # The description displayed on the playbook web page, which is located at
+  # /<playbook name>. Defaults to null, which disables the playbook web page.
   web_description: 'Run the main.yml playbook with a single command:'
+
+another-playbook.yml:
+  # and so on...
 ```
 
 
 ### Playbook Passwords
 
-Passwords for password-protected playbooks must be specified as bcrypt hashes in
-the `$AOH_PASSWORDS_FILE` file. For example:
+Passwords for password-protected playbooks must be included as bcrypt hashes in
+the file specified by the `$AOH_PASSWORDS_FILE` option. For example:
 
 <!-- EXAMPLE COPIED FROM demo/passwords.yml: -->
 
@@ -159,57 +230,41 @@ the `$AOH_PASSWORDS_FILE` file. For example:
 main.yml: $2a$14$LfC6Bcczc0WM.OObqgQPYeVvYa10g1Z4Z8C.eERyd.GarPmNa5/ve
 ```
 
+There are many tools for generating bcrypt hashes. Here is a one-liner that uses
+the same `bcrypt` Python library that AoH depends on internally:
+
+```
+$ python -c 'import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())'
+```
+
 
 ## Security
 
-Like both Ansible and Ansible Pull, AoH clients must trust the server and its
-playbooks since they are allowed to execute arbitrary commands. Unlike both
-Ansible and Ansible Pull however, AoH introduces the risk of clients influencing
-command execution on the server. As just one example, if a malicious client
-passed the options `--extra-var "foo={{ lookup('file', '/secret' }}"` to AoH and
-the variable `foo` was used in a task run on the client, the contents of
-`/secret` could be leaked to the client.
+Like both Ansible and Ansible Pull, AoH clients must completely trust the server
+and its playbooks, since they are allowed to execute arbitrary commands. AoH
+does not attempt to protect clients from malicious servers.
 
-AoH aims to minimize these security risks as much as possible while still
-providing flexibility for different use cases. Below are the measures that AoH
-takes, or can be configured to take, to mitigate security risks.
+Unlike both Ansible and Ansible Pull however, AoH introduces the risk of clients
+influencing the execution of commands on the server. AoH implements various
+protections against this risk by default, including blocking potentially unsafe
+`ansible-playbook` arguments and limiting play execution to the AoH client.
+Additional protections are available via playbook options such as `host`,
+`password`, and `output`.
 
-- **Restricting Playbook Access:** By default, any client with access to the AoH
-  server can run any playbook. If access must be restricted to certain clients,
-  playbooks should be password-protected using the `password` playbook option
-  and the `$AOH_PASSWORDS_FILE` file.
+The following security measures are recommended as a baseline when deploying
+AoH:
 
-- **Blocking Ansible Options:** By default, clients are only allowed to invoke
-  only a small subset of reasonably safe `ansible-playbook` options. Additional
-  options can be allowed or blocked via the `allow_opts` and `block_opts`
-  playbook options.
-
-- **Blocking Jinja Expressions in Ansible Arguments:** By default,
-  clients-supplied `ansible-playbook` options containing Jinja expressions are
-  blocked. If necessary, this protection can be disabled via the `jinja_args`
-  playbook option.
-
-- **Hiding Ansible Output:** By default, clients receives and print all Ansible
-  output, including `--diff` output, `--verbose` logs, and even output from
-  tasks executed on other hosts. If this behavior could reveal sensitive data,
-  Ansible output should be hidden entirely from clients via the `output`
-  playbook option.
-
-- **Forcing Client Hostnames:** By default, the server executes tasks on clients
-  according to their reported hostnames. This could allow a client to receive
-  playbook tasks meant for other hosts. If a playbook includes sensitive tasks
-  for other hosts, client hostnames should be set to a safe value via the `host`
-  playbook option.
-
-- **Forcing Ansible Options:** Additional `ansible-playbook` options may be
-  added to every execution via the `extra_args` playbook option. For example, if
-  clients must not be able to trigger the execution of other hosts' tasks, then
-  the `['--limit', 'aoh']` option should be added to `extra_args`. Consider also
-  adding these options to `block_opts` to prevent clients from modifying them.
-
-Other recommended security measures include using a reverse proxy to serve AoH
-over HTTPS only, using Ansible Vault to securely store playbook secrets, and
-ensuring that all playbooks are fully trusted and secure.
+-  Ensure all Ansible playbooks are trusted and do not contain any potential
+   security holes
+-  Run the AoH server behind a reverse proxy that enforces HTTPS (and set
+   the `$AOH_ORIGIN` option accordingly)
+-  Restrict access for each playbook to authorized clients using the `password`
+   playbook option
+-  Encrypt sensitive variables using Ansible Vault and require clients to supply
+   the decryption password via Ansible's `--ask-vault-pass` option
+-  If clients are untrusted and an Ansible playbook contains tasks for multiple
+   hosts, create separate entries in the AoH playbooks file for each host with
+   the `host` option set explicitly to prevent hostname spoofing
 
 
 ## Limitations
@@ -218,6 +273,6 @@ ensuring that all playbooks are fully trusted and secure.
   `ansible_connection` option via a custom inventory host variable. This
   variable must not be overridden by, for example, variables in `host_vars/*`
   files. Refer to Ansible's [variable precedence
-  documentation][ansible-precedence] for more information.
+  documentation][ansible-precedence] for more details.
 
 [ansible-precedence]: https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence

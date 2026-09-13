@@ -1,0 +1,2 @@
+- name: A no-op play
+  hosts: all

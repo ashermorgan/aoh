@@ -303,6 +303,8 @@ def cli(args):
             prog = f'curl -s {AOH_ORIGIN}/run | ' \
                    f'{os.path.basename(sys.executable)} -'
 
+        # Note: changes to this message should also be applied to README.md
+
         print(f'Usage: {prog} [-h] [<playbook>] [<opts>...]')
         print()
         print('Runs Ansible playbooks on a remote server and fetches commands '
@@ -315,7 +317,7 @@ def cli(args):
         print()
         print('Options: ')
         print('  -h, --help        Show this help message and exit')
-        print('  <opts>            Any server-approved ansible-playbook(1) '
+        print('  <opts>            Any (server-approved) ansible-playbook(1) '
               'options')
 
         sys.exit(0)

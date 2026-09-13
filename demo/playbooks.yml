@@ -1,39 +1,40 @@
 main.yml: # The playbook name
 
-  # The path to the playbook, relative to $AOH_PLAYBOOKS_FILE. Defaults to the
-  # playbook name.
+  # The path to the playbook. Relative paths are interpreted as relative to
+  # $AOH_PLAYBOOKS_FILE. Defaults to the playbook name.
   path: my-playbook.yml
 
-  # The path to an associated Ansible config file, if one exists, relative to
-  # $AOH_PLAYBOOKS_FILE.
+  # The path to an associated Ansible config file, if one exists. Relative paths
+  # are interpreted as relative to $AOH_PLAYBOOKS_FILE.
   config: ansible.cfg
 
-  # The hostname to assign to clients. If omitted or null, each client is
-  # assigned the hostname that it reports for itself.
-  host: my-aoh-host
+  # The hostname to assign to clients. If set to null, clients are assigned the
+  # hostname that they report for themselves, which could be spoofed. Defaults
+  # to null.
+  host: my-host
 
-  # The groups to assign to clients, in addition to the aoh group and any groups
-  # defined in inventory files.
+  # The groups to assign to clients, in addition to the "aoh" group and any
+  # groups defined in inventory files.
   groups:
     - group1
     - group2
 
-  # Whether to restrict play execution to the AoH client using
+  # Whether to restrict play execution to the AoH client only using
   # ansible-playbook's --limit option. If enabled, the --limit option must not
   # be present in allow_opts or extra_args. Defaults to true.
   limit: true
 
   # Whether to require a password to execute the playbook. Passwords must be
-  # specified separately in the $AOH_PASSWORDS_FILE file (see below). Defaults
-  # to false.
+  # specified separately in the $AOH_PASSWORDS_FILE file (see the playbook
+  # passwords section below). Defaults to false.
   password: true
 
-  # Whether to print Ansible output on the client. Defaults to true.
+  # Whether ansible-playbook output is sent to the client. Defaults to true.
   output: true
 
-  # The ansible-playbooks options that users are allowed to invoke. Short and
-  # long option forms must be specified separately. The following options are
-  # allowed by default:
+  # A list of ansible-playbooks options that users are allowed to invoke. Short
+  # and long option forms must be specified separately. The following options
+  # are allowed by default:
   #   --ask-become-pass / -K
   #   --ask-pass / -k
   #   --ask-vault-password / --ask-vault-pass / -J
@@ -53,12 +54,16 @@ main.yml: # The playbook name
 
   # Whether to allow clients to use Jinja expressions in ansible-playbook
   # arguments. Defaults to false.
-  jinja_args: true
+  jinja_args: false
 
-  # Additional raw ansible-playbook options
+  # A list of additional arguments to pass to ansible-playbook. These are not
+  # subject to the allow_opts/block_opts/jinja_args restrictions.
   extra_args:
     - '--diff'
 
-  # The description displayed on the playbook web page. Defaults to null, which
-  # disables the playbook web page.
+  # The description displayed on the playbook web page, which is located at
+  # /<playbook name>. Defaults to null, which disables the playbook web page.
   web_description: 'Run the main.yml playbook with a single command:'
+
+another-playbook.yml:
+  # and so on...

@@ -1,4 +1,4 @@
-- name: My play
+- name: Demo play
   hosts: all
   tasks:
     - name: Write message to ~/aoh-demo.txt
