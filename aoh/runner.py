@@ -132,6 +132,12 @@ class Runner:
         def _finished_callback(_):
             self._t_finished = time.time()
 
+        def _cancel_callback():
+            # We pass our own callback because the default behavior registers
+            # SIGTERM and SIGINT handlers but doesn't remove them after
+            # ansible-runner exits
+            return False
+
         self._thread, self._runner = ansible_runner.run_async(
             private_data_dir=self._DIR,
             ident=self.id,
@@ -141,6 +147,7 @@ class Runner:
             passwords=pw_prompt_answers,
             playbook=self.playbook.path,
             finished_callback=_finished_callback,
+            cancel_callback=_cancel_callback,
             quiet=not AOH_DEBUG,
             suppress_env_files=True,
         )
