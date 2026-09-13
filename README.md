@@ -32,7 +32,7 @@ First, build and run the AoH server docker image.
 
 ```
 $ docker build -t aoh .
-$ docker run --rm --detach --name aoh -p 8000:8000 -v ./demo:/aoh aoh
+$ docker run --rm --detach --name aoh -p 8000:8000 aoh
 ```
 
 Next, run the [demo playbook](demo/my-playbook.yml) via the client Python
@@ -101,7 +101,7 @@ $ docker stop aoh
 Next steps for deploying AoH include:
 
 - Copy your own Ansible playbooks to the server
-- Update the `playbooks.yml` and `passwords.yml` files that are mounted under
+- Create your own `playbooks.yml` and `passwords.yml` files and mount them under
   `/aoh/` (see the [playbooks](#playbooks) and [playbook
   passwords](#playbook-passwords) sections for reference)
 - Apply the recommended [security measures](#security)
