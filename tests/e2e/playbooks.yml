@@ -1,0 +1,13 @@
+test1.yml:
+  path: test_connection.yml
+
+test2.yml:
+  path: test_connection.yml
+  config: pipelining.cfg
+
+test3.yml:
+  path: test_become_password_handling.yml
+
+test4.yml:
+  path: test_become_password_handling.yml
+  config: pipelining.cfg
