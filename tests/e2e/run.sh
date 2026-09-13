@@ -33,6 +33,7 @@ for i in {1..4}; do
         "curl http://aoh-test-server:8000/run | python3 - test$i.yml" \
         | tee $log
     $DOCKER stop aoh-test-server
+    sleep 1
 
     if grep 'failed=0' < $log; then
         echo ================================
