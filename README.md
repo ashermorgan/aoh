@@ -28,11 +28,10 @@ Note that Ansible controllers don't support Windows, so the `ansible-playbook`,
 
 ## Getting Started
 
-First, build and run the AoH server docker image.
+First, run the AoH server docker image.
 
 ```
-$ docker build -t aoh .
-$ docker run --rm --detach --name aoh -p 8000:8000 aoh
+$ docker run --rm --detach --name aoh -p 8000:8000 ghcr.io/ashermorgan/aoh
 ```
 
 Next, run the [demo playbook](demo/my-playbook.yml) via the client Python
