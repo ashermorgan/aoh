@@ -21,7 +21,7 @@
             {% if is_windows %}
             {% set cmd = '(Invoke-WebRequest %s/run).Content' % AOH_ORIGIN %}
             {% else %}
-            {% set cmd = 'curl %s/run' % AOH_ORIGIN %}
+            {% set cmd = 'curl -s %s/run' % AOH_ORIGIN %}
             {% endif %}
 
             {% set cmd = cmd + ' | python3' %}
