@@ -34,8 +34,8 @@ First, run the AoH server docker image.
 $ docker run --rm --detach --name aoh -p 8000:8000 ghcr.io/ashermorgan/aoh
 ```
 
-Next, run the [demo playbook](demo/my-playbook.yml) via the client Python
-script. The demo AoH password is `hunter2`.
+Then run the [demo playbook](demo/my-playbook.yml) via the client Python script.
+The demo AoH password is `hunter2`.
 
 ```
 $ curl -s 127.0.0.1:8000/run | python3
@@ -233,7 +233,7 @@ There are many tools for generating bcrypt hashes. Here is a one-liner that uses
 the same `bcrypt` Python library that AoH depends on internally:
 
 ```
-$ python -c 'import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())'
+$ python3 -c 'import bcrypt, getpass; print(bcrypt.hashpw(getpass.getpass().encode(), bcrypt.gensalt()).decode())'
 ```
 
 
@@ -275,3 +275,34 @@ AoH:
   documentation][ansible-precedence] for more details.
 
 [ansible-precedence]: https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence
+
+
+## Development
+
+To run AoH locally for development, first install the Python dependencies and
+set core configuration options via a `.env` file.
+
+```
+$ pip install -r requirements.txt
+$ cp .env.example .env
+```
+
+Then start the AoH server by running the `aoh` module.
+
+```
+$ python3 -m aoh
+```
+
+Finally, open another terminal and run a playbook via the client CLI.
+
+```
+$ curl -s 127.0.0.1:5000/run | python3
+```
+
+AoH also has unit tests and end-to-end tests, which can be run with the
+following commands. The end-to-end tests require Docker.
+
+```
+$ python3 -m unittest tests.unit
+$ ./tests/e2e/run.sh
+```
