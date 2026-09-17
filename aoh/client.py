@@ -296,11 +296,9 @@ def cli(args):
     if '-h' in args or '--help' in args:
         if len(args) >= 1 and args[0] != '-':
             prog = args[0]
-        elif sys.platform == 'win32':
-            prog = f'(Invoke-WebRequest {AOH_ORIGIN}/run).Content | ' \
-                   f'{os.path.basename(sys.executable)} -'
         else:
-            prog = f'curl -s {AOH_ORIGIN}/run | ' \
+            curl = 'irm' if sys.platform == 'win32' else 'curl -s'
+            prog = f'{curl} {AOH_ORIGIN}/run | ' \
                    f'{os.path.basename(sys.executable)} -'
 
         # Note: changes to this message should also be applied to README.md

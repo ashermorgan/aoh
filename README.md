@@ -84,11 +84,11 @@ Options:
   <opts>            Any (server-approved) ansible-playbook(1) options
 ```
 
-Windows clients are also supported. Just use `Invoke-WebRequest` instead of
-`curl`.
+Windows clients are also supported. Just use the `Invoke-RestMethod` cmdlet
+instead of `curl`.
 
 ```
-PS> (Invoke-WebRequest http://<server IP>:8000).Content | python
+PS> irm http://<server IP>:8000 | python
 ```
 
 Finally, stop the AoH server when you're done using it.
