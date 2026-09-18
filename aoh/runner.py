@@ -55,13 +55,14 @@ def get_config_values(config, keys):
 class Runner:
     """An Ansible-over-HTTP playbook runner."""
 
-    def __init__(self, playbook, host, args, passwords):
+    def __init__(self, playbook, host, args, color, passwords):
         """Create a new AoH runner."""
 
         self.id = str(uuid.uuid4()) # Runner ID (set to None after teardown)
         self.playbook = playbook
         self.host = self.playbook.host or host or 'aoh_node'
         self.args = args
+        self.color = color
         self.passwords = passwords
 
         self._lock = threading.Lock() # Used to protect all public methods
@@ -117,7 +118,7 @@ class Runner:
                 config['DEFAULT_CONNECTION_PLUGIN_PATH']
             ),
             'ANSIBLE_CONFIG': self.playbook.config,
-            'ANSIBLE_FORCE_COLOR': '1',
+            ('ANSIBLE_FORCE_COLOR' if self.color else 'NO_COLOR'): '1',
             'ANSIBLE_INVENTORY': ','.join(
                 [f'{self._DIR}/inventory.ini'] + config['DEFAULT_HOST_LIST']
             ),

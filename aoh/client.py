@@ -265,9 +265,16 @@ def create_runner(playbook, args):
 
     url = f'{AOH_ORIGIN}/runners/{playbook}'
 
+    TRUTHY_VALUES = ['1', 'true', 'yes']
+    color = sys.stdout.isatty()
+    color &= os.getenv('NO_COLOR', '').lower() not in TRUTHY_VALUES
+    color &= os.getenv('ANSIBLE_NOCOLOR', '').lower() not in TRUTHY_VALUES
+    color |= os.getenv('ANSIBLE_FORCE_COLOR', '').lower() in TRUTHY_VALUES
+
     req = {
         'host': platform.node(),
         'args': args,
+        'color': color,
     }
 
     status, headers, res = send_json_request(url, req, 'POST')
