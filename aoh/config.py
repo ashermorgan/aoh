@@ -36,6 +36,7 @@ if AOH_ORIGIN is not None:
 AOH_PLAYBOOKS_FILE = os.getenv('AOH_PLAYBOOKS_FILE', 'playbooks.yml')
 if not os.path.exists(AOH_PLAYBOOKS_FILE):
     logger.warning('$AOH_PLAYBOOKS_FILE does not exist')
+AOH_PLAYBOOKS_DIR = os.path.dirname(AOH_PLAYBOOKS_FILE)
 
 AOH_PASSWORDS_FILE = os.getenv('AOH_PASSWORDS_FILE', 'passwords.yml')
 if not os.path.exists(AOH_PASSWORDS_FILE):

@@ -133,8 +133,10 @@ variables.
   `./passwords.yml` otherwise.
 
 - `AOH_PLAYBOOKS_FILE`: The file containing playbook configuration (see the
-  [playbooks](#playbooks) section below). Defaults to `/aoh/playbooks.yml` when
-  running the Docker image and `./playbooks.yml` otherwise.
+  [playbooks](#playbooks) section below). The parent directory of this file is
+  also used as the working directory for all Ansible operations. Defaults to
+  `/aoh/playbooks.yml` when running the Docker image and `./playbooks.yml`
+  otherwise.
 
 
 ### Playbooks

@@ -10,7 +10,7 @@ import uuid
 
 import ansible_runner
 
-from aoh.config import AOH_DEBUG
+from aoh.config import AOH_DEBUG, AOH_PLAYBOOKS_DIR
 
 _CONNECTION_PLUGIN_DIR = f'{os.path.dirname(__file__)}/connection_plugins/'
 
@@ -35,6 +35,7 @@ def get_config_values(playbook, keys):
 
         raw_config = ansible_runner.get_ansible_config(
             'dump',
+            host_cwd=AOH_PLAYBOOKS_DIR,
             envvars=env,
             private_data_dir=dir,
             quiet=True,
@@ -148,6 +149,7 @@ class Runner:
         self._thread, self._runner = ansible_runner.run_async(
             private_data_dir=self._DIR,
             ident=self.id,
+            host_cwd=AOH_PLAYBOOKS_DIR,
             envvars=env,
             cmdline=cmdline,
             limit=self.playbook.host if self.playbook.limit else None,
