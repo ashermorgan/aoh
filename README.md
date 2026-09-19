@@ -164,7 +164,9 @@ main.yml: # The playbook name
     - group1
     - group2
 
-  # A dictionary of environment variables to pass to ansible-playbook.
+  # A dictionary of environment variables to pass to ansible-playbook. Note that
+  # the ANSIBLE_FORCE_COLOR and ANSIBLE_NOCOLOR variables are not supported
+  # here as they are parsed client-side.
   env:
     ANSIBLE_PIPELINING: 'true'
 

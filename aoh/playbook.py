@@ -2,10 +2,12 @@ import os
 
 import yaml
 
-from aoh.config import AOH_PLAYBOOKS_FILE
+from aoh.config import AOH_PLAYBOOKS_DIR, AOH_PLAYBOOKS_FILE
 from aoh.security import CLI_OPT_BLACKLIST
 
-_PLAYBOOKS_DIR = os.path.dirname(AOH_PLAYBOOKS_FILE)
+_ENV_VAR_BLACKLIST = [
+    'ANSIBLE_FORCE_COLOR', 'ANSIBLE_NOCOLOR', 'NO_COLOR', # parsed client-side
+]
 
 
 class PlaybookFileError(Exception):
@@ -60,7 +62,7 @@ class Playbook:
         self.extra_args = raw.get('extra_args', [])
         self.web_description = raw.get('web_description')
 
-        self.path = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.path))
+        self.path = os.path.abspath(os.path.join(AOH_PLAYBOOKS_DIR, self.path))
 
         if self.limit:
             if '--limit' in self.allow_opts or '-l' in self.allow_opts:
@@ -77,6 +79,11 @@ class Playbook:
             if opt in self.extra_args:
                 raise PlaybookFileError(f'The "{opt}" option is not supported '
                                         'and cannot be included in extra_args')
+
+        for var in _ENV_VAR_BLACKLIST:
+            if var in self.env:
+                raise PlaybookFileError(f'The "{var}" variable is not supported'
+                                        ' and cannot be included in env')
 
 
 def get_playbook(name):
