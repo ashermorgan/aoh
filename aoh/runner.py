@@ -25,19 +25,23 @@ class RunnerError(Exception):
     """Raised for AoH runner errors."""
 
 
-def get_config_values(config, keys):
+def get_config_values(playbook, keys):
     """Query Ansible config option values."""
 
     with tempfile.TemporaryDirectory(prefix='aoh-') as dir:
+        env = playbook.env.copy()
+        env['ANSIBLE_FORCE_COLOR'] = '0'
+        env['ANSIBLE_NOCOLOR'] = '1'
+
         raw_config = ansible_runner.get_ansible_config(
             'dump',
-            config,
+            envvars=env,
             private_data_dir=dir,
             quiet=True,
         )[0]
 
         if not raw_config:
-            raise RunnerError(f'Failed to dump Ansible config from {config}')
+            raise RunnerError('Failed to dump Ansible config')
 
         result = {}
         for key in keys:
@@ -107,22 +111,24 @@ class Runner:
             f.writelines(f'[{g}]\n{self.host}\n' for g in self.playbook.groups)
 
         config = get_config_values(
-            self.playbook.config,
+            self.playbook,
             ['DEFAULT_CONNECTION_PLUGIN_PATH', 'DEFAULT_HOST_LIST']
         )
 
-        env = {
-            'ANSIBLE_AOH_DIR': self._DIR,
-            'ANSIBLE_CONNECTION_PLUGINS': ':'.join(
-                [_CONNECTION_PLUGIN_DIR] +
-                config['DEFAULT_CONNECTION_PLUGIN_PATH']
-            ),
-            'ANSIBLE_CONFIG': self.playbook.config,
-            ('ANSIBLE_FORCE_COLOR' if self.color else 'NO_COLOR'): '1',
-            'ANSIBLE_INVENTORY': ','.join(
-                [f'{self._DIR}/inventory.ini'] + config['DEFAULT_HOST_LIST']
-            ),
-        }
+        # Assemble env vars, from low-priority values to high-priority values
+        env = {}
+        env['ANSIBLE_FORCE_COLOR' if self.color else 'NO_COLOR'] = '1'
+        for key, val in self.playbook.env.items():
+            env[key] = val
+        env['ANSIBLE_AOH_DIR'] = self._DIR
+        env['ANSIBLE_CONNECTION_PLUGINS'] = ':'.join(
+            [_CONNECTION_PLUGIN_DIR] +
+            config['DEFAULT_CONNECTION_PLUGIN_PATH']
+        )
+        env['ANSIBLE_INVENTORY'] = ','.join(
+            [f'{self._DIR}/inventory.ini'] + config['DEFAULT_HOST_LIST']
+        )
+
         pw_prompt_answers = {}
         for pw_type in self.passwords:
             pw_prompt_answers[_PASSWORD_PROMPTS[pw_type]] = \

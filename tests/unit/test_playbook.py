@@ -13,9 +13,9 @@ class TestPlaybookGetPlaybook(unittest.TestCase):
 
         self.assertEqual(pb.name, 'main.yml')
         self.assertEqual(pb.path, os.path.abspath('main.yml'))
-        self.assertEqual(pb.config, None)
         self.assertEqual(pb.host, None)
         self.assertEqual(pb.groups, [])
+        self.assertEqual(pb.env, {})
         self.assertEqual(pb.limit, True)
         self.assertEqual(pb.password, False)
         self.assertEqual(pb.output, True)

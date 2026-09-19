@@ -94,7 +94,7 @@ def get_required_passwords(playbook, args):
         if opt in opts:
             pw_types.add(pw_type)
 
-    opts = get_config_values(playbook.config, _CONFIG_PASSWORD_OPTS.keys())
+    opts = get_config_values(playbook, _CONFIG_PASSWORD_OPTS.keys())
     for opt, pw_type in _CONFIG_PASSWORD_OPTS.items():
         if opts[opt]:
             pw_types.add(pw_type)

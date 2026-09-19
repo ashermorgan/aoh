@@ -47,3 +47,7 @@ for i in {1..4}; do
         exit 1
     fi
 done
+
+echo ================================
+echo All tests passed.
+echo ================================

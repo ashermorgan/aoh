@@ -4,10 +4,6 @@ main.yml: # The playbook name
   # $AOH_PLAYBOOKS_FILE. Defaults to the playbook name.
   path: my-playbook.yml
 
-  # The path to an associated Ansible config file, if one exists. Relative paths
-  # are interpreted as relative to $AOH_PLAYBOOKS_FILE.
-  config: ansible.cfg
-
   # The hostname to assign to clients. If set to null, clients are assigned the
   # hostname that they report for themselves, which could be spoofed. Defaults
   # to null.
@@ -18,6 +14,10 @@ main.yml: # The playbook name
   groups:
     - group1
     - group2
+
+  # A dictionary of environment variables to pass to ansible-playbook.
+  env:
+    ANSIBLE_PIPELINING: 'true'
 
   # Whether to restrict play execution to the AoH client only using
   # ansible-playbook's --limit option. If enabled, the --limit option must not
@@ -57,7 +57,9 @@ main.yml: # The playbook name
   jinja_args: false
 
   # A list of additional arguments to pass to ansible-playbook. These are not
-  # subject to the allow_opts/block_opts/jinja_args restrictions.
+  # subject to the allow_opts/block_opts/jinja_args restrictions. Note that the
+  # --inventory option is not supported and the env.ANSIBLE_INVENTORY playbook
+  # option should be used instead for specifying inventory files.
   extra_args:
     - '--diff'
 

@@ -13,14 +13,14 @@ class PlaybookFileError(Exception):
 
 
 class Playbook:
-    def __init__(self, name, dict):
+    def __init__(self, name, raw):
         """Parse a playbook configuration from a dictionary."""
 
         _types = {
             'path': str,
-            'config': str,
             'host': str,
             'groups': list,
+            'env': dict,
             'limit': bool,
             'password': bool,
             'output': bool,
@@ -32,34 +32,35 @@ class Playbook:
         }
 
         for key, _type in _types.items():
-            if key in dict:
-                if type(dict[key]) != _type:
+            if key in raw:
+                if type(raw[key]) != _type:
                     raise PlaybookFileError(f'"{key}" field must be of type '
                                             f'{_type}')
 
-                if  _type is list and any(type(x) != str for x in dict[key]):
+                if _type is list and any(type(x) != str for x in raw[key]):
                     raise PlaybookFileError(f'"{key}" elements must be of type '
                                             'str')
 
+                if _type is dict and any(type(x) != str for x in
+                                         raw[key].values()):
+                    raise PlaybookFileError(f'"{key}" values must be of type '
+                                            'str')
+
         self.name = name
-        self.path = dict.get('path', name)
-        self.config = dict.get('config', None)
-        self.host = dict.get('host')
-        self.groups = dict.get('groups', [])
-        self.limit = dict.get('limit', True)
-        self.password = dict.get('password', False)
-        self.output = dict.get('output', True)
-        self.allow_opts = dict.get('allow_opts', [])
-        self.block_opts = dict.get('block_opts', [])
-        self.jinja_args = dict.get('jinja_args', False)
-        self.extra_args = dict.get('extra_args', [])
-        self.web_description = dict.get('web_description')
+        self.path = raw.get('path', name)
+        self.host = raw.get('host')
+        self.groups = raw.get('groups', [])
+        self.env = raw.get('env', {})
+        self.limit = raw.get('limit', True)
+        self.password = raw.get('password', False)
+        self.output = raw.get('output', True)
+        self.allow_opts = raw.get('allow_opts', [])
+        self.block_opts = raw.get('block_opts', [])
+        self.jinja_args = raw.get('jinja_args', False)
+        self.extra_args = raw.get('extra_args', [])
+        self.web_description = raw.get('web_description')
 
         self.path = os.path.abspath(os.path.join(_PLAYBOOKS_DIR, self.path))
-        if self.config:
-            self.config = os.path.abspath(os.path.join(_PLAYBOOKS_DIR,
-                                                       self.config))
-
 
         if self.limit:
             if '--limit' in self.allow_opts or '-l' in self.allow_opts:
