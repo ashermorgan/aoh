@@ -11,13 +11,17 @@ log=$(mktemp)
 function on_exit() {
     echo 'Cleaning up...'
     rm -f $log
-    $DOCKER stop aoh-test-server || true # ignore if already stopped
+    if [ $($DOCKER ps --filter name=aoh | wc -l) -gt 1 ]; then
+        $DOCKER stop aoh-test-server
+    fi
 }
 trap on_exit EXIT
 
 $DOCKER build -t aoh-test-client -f client.Dockerfile .
 $DOCKER build -t aoh-test-server ../../
-$DOCKER network create aoh-test  || true # ignore if already created
+if [ $($DOCKER network ls --filter name=aoh-test | wc -l) -eq 1 ]; then
+    $DOCKER network create aoh-test
+fi
 
 for i in {1..4}; do
     echo ================================
