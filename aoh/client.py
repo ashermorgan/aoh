@@ -272,9 +272,10 @@ def create_runner(playbook, args):
     color |= os.getenv('ANSIBLE_FORCE_COLOR', '').lower() in TRUTHY_VALUES
 
     req = {
-        'host': platform.node(),
         'args': args,
         'color': color,
+        'host': platform.node(),
+        'is_windows': sys.platform == 'win32',
     }
 
     status, headers, res = send_json_request(url, req, 'POST')

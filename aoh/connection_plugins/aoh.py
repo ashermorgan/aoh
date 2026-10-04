@@ -9,8 +9,6 @@ DOCUMENTATION = """
             required: true
             env:
                 - name: ANSIBLE_AOH_DIR
-            vars:
-                - name: ansible_aoh_dir
         aoh_timeout:
             description: The timeout for AoH responses, in seconds
             type: integer
@@ -32,6 +30,12 @@ DOCUMENTATION = """
                 - name: ANSIBLE_AOH_KEEP_ALIVE_COUNT
             vars:
                 - name: ansible_aoh_keep_alive_count
+        aoh_is_windows:
+            description: Whether the client host runs Windows
+            type: bool
+            default: false
+            env:
+                - name: ANSIBLE_AOH_IS_WINDOWS
 """
 
 import base64
@@ -42,12 +46,15 @@ import select
 import typing as t
 from uuid import uuid4
 
+from ansible._internal._powershell import _clixml
 from ansible.errors import (
     AnsibleConnectionFailure,
     AnsibleError,
     AnsibleFileNotFound,
 )
+from ansible.plugins import AnsiblePlugin
 from ansible.plugins.connection import ConnectionBase
+from ansible.plugins.shell.cmd import ShellModule as CmdShellModule
 from ansible.utils.display import Display
 
 display = Display()
@@ -60,9 +67,26 @@ class Connection(ConnectionBase):
     has_pipelining = True
     has_tty = False
 
+    _shell: CmdShellModule
 
     def __init__(self, *args: t.Any, **kwargs: t.Any) -> None:
+        AnsiblePlugin.__init__(self) # enable get_option()
+        self.is_windows = self.get_option('aoh_is_windows')
+
+        if self.is_windows:
+            self._shell_type = 'cmd' # must be set before super().__init__()
+
         super().__init__(*args, **kwargs)
+
+        if self.is_windows and self._shell.SHELL_FAMILY != 'cmd':
+            display.warning(
+                msg='The aoh connection plugin should have the shell type of ' \
+                    f'cmd and not {self._shell.SHELL_FAMILY}. This may ' \
+                    'result in an error when attempting to run more complex ' \
+                    'commands.',
+                help_text='Unset ansible_shell_type or set to cmd to use the ' \
+                          'required cmd shell.',
+            )
 
         self.timeout = self.get_option('aoh_timeout')
         self.keep_alive_count = self.get_option('aoh_keep_alive_count')
@@ -72,6 +96,11 @@ class Connection(ConnectionBase):
         self._recvbuf = None
         self._recvpoll = None
         self._connected = False
+
+        if self.is_windows:
+            # ty: ignore[invalid-assignment]
+            self.module_implementation_preferences = ('.ps1', '.exe', '')
+            self.allow_executable = False # Prevent use of "/bin/sh -c ..."
 
 
     def _connect(self) -> Connection:  # noqa: F821
@@ -167,6 +196,9 @@ class Connection(ConnectionBase):
 
         display.vvv(f'EXEC {cmd}', host=self._play_context.remote_addr)
 
+        if self.is_windows:
+            sudoable = False
+
         msg = {
             'cmd': cmd,
             'stdin': in_data and in_data.decode('latin1'),
@@ -182,11 +214,14 @@ class Connection(ConnectionBase):
         res = self._send_message_sync({'exec': msg})
         if not all(k in res for k in ['returncode', 'stdout', 'stderr']):
             raise AnsibleError('Received invalid AoH EXEC response')
-        return (
-            res['returncode'],
-            res['stdout'].encode('latin1'),
-            res['stderr'].encode('latin1'),
-        )
+
+        stdout = res['stdout'].encode('latin1')
+        stderr = res['stderr'].encode('latin1')
+
+        if self.is_windows:
+            stderr = _clixml.replace_stderr_clixml(stderr)
+
+        return (res['returncode'], stdout, stderr)
 
 
     def put_file(self, in_path: str, out_path: str) -> None:

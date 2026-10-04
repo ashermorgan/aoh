@@ -35,11 +35,10 @@
   - name: raw with unicode arg and output
     raw: "{{ echo_commands[action_prefix ~ ansible_connection ~ '_' ~ (ansible_shell_type|default(''))] | default(echo_commands['default']) }}"
     vars:
-      # Windows over SSH does not have a way to set the console codepage to allow UTF-8. We need to
+      # Windows over AoH does not have a way to set the console codepage to allow UTF-8. We need to
       # wrap the commands we send to the remote host to get it working.
       echo_commands:
-        win_ssh_powershell: '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; echo {{ echo_string }}'
-        win_ssh_cmd: 'powershell.exe -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; echo {{ echo_string }}"'
+        win_aoh_cmd: 'powershell.exe -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; echo {{ echo_string }}"'
         default: echo {{ echo_string }}
     register: command
   - name: check output of raw with unicode arg and output

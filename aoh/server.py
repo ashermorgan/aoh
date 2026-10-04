@@ -102,7 +102,7 @@ def new_runner(path):
         return {'err': 'Bad or banned arguments passed'}, 400
 
     runner = Runner(playbook, request.json['host'], request.json['args'],
-                    request.json['color'], act_pws)
+                    request.json['is_windows'], request.json['color'], act_pws)
 
     assert runner.id is not None
     _RUNNERS[runner.id] = runner

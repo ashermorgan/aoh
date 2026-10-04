@@ -60,13 +60,14 @@ def get_config_values(playbook, keys):
 class Runner:
     """An Ansible-over-HTTP playbook runner."""
 
-    def __init__(self, playbook, host, args, color, passwords):
+    def __init__(self, playbook, host, args, is_windows, color, passwords):
         """Create a new AoH runner."""
 
         self.id = str(uuid.uuid4()) # Runner ID (set to None after teardown)
         self.playbook = playbook
         self.host = self.playbook.host or host or 'aoh_node'
         self.args = args
+        self.is_windows = is_windows
         self.color = color
         self.passwords = passwords
 
@@ -122,6 +123,7 @@ class Runner:
         for key, val in self.playbook.env.items():
             env[key] = val
         env['ANSIBLE_AOH_DIR'] = self._DIR
+        env['ANSIBLE_AOH_IS_WINDOWS'] = '1' if self.is_windows else '0'
         env['ANSIBLE_CONNECTION_PLUGINS'] = ':'.join(
             [_CONNECTION_PLUGIN_DIR] +
             config['DEFAULT_CONNECTION_PLUGIN_PATH']
