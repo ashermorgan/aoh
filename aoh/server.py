@@ -4,7 +4,12 @@ import os
 from flask import Flask, abort, render_template, request, session
 from flask_apscheduler import APScheduler
 
-from aoh.config import AOH_MAX_RUNNERS, AOH_ORIGIN
+from aoh.config import (
+    AOH_GC_INTERVAL,
+    AOH_GC_THRESHOLD,
+    AOH_MAX_RUNNERS,
+    AOH_ORIGIN,
+)
 from aoh.playbook import PlaybookFileError, get_playbook
 from aoh.runner import Runner, RunnerError
 from aoh.security import (
@@ -16,10 +21,6 @@ from aoh.security import (
 
 _RUNNERS = {}
 
-# Every 60s, tear down runners that finished more than 60s ago
-_GC_INTERVAL = 60
-_GC_THRESHOLD = 60
-
 app = Flask(__name__)
 app.secret_key = os.urandom(16)
 
@@ -29,13 +30,13 @@ scheduler.init_app(app)
 logger = logging.getLogger(__name__)
 
 
-@scheduler.task('interval', seconds=_GC_INTERVAL)
+@scheduler.task('interval', seconds=AOH_GC_INTERVAL)
 def gc():
     """Tear down and delete timed-out runners."""
 
     runners = list(_RUNNERS.items())
     for id, runner in runners:
-        if runner and runner.has_timed_out(_GC_THRESHOLD):
+        if runner and runner.has_timed_out(AOH_GC_THRESHOLD):
             logger.info(f'{runner.playbook.name} (#{id[:8]}): Runner torn down '
                         'due to inactivity')
             runner.teardown()

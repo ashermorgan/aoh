@@ -118,6 +118,13 @@ variables.
 - `AOH_DEBUG`: If set to `1`, the AoH server will copy `ansible-playbook` output
   to the server's stdout. Defaults to `0`.
 
+- `AOH_GC_INTERVAL`: The interval on which to clean up exited runners, in
+  seconds. Defaults to `60`.
+
+- `AOH_GC_THRESHOLD`: The delay after a runner exits before is may be cleaned
+  up, in seconds. This delay exists so that clients have time to fetch the final
+  lines of Ansible output. Defaults to `60`.
+
 - `AOH_LOG_LEVEL`: The threshold for AoH logs, which are written to the server's
   stdout. Must be one of `CRITICAL`, `ERROR`, `WARNING`, `INFO`, or `DEBUG`.
   Defaults to `ERROR`.

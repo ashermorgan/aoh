@@ -11,6 +11,24 @@ load_dotenv()
 
 AOH_DEBUG = (os.getenv('AOH_DEBUG', '0') == '1')
 
+try:
+    AOH_GC_INTERVAL = int(os.getenv('AOH_GC_INTERVAL', '60'))
+except ValueError:
+    logger.critical('$AOH_GC_INTERVAL must be a non-negative integer')
+    sys.exit(1)
+if AOH_GC_INTERVAL < 0:
+    logger.critical('$AOH_GC_INTERVAL must be a non-negative integer')
+    sys.exit(1)
+
+try:
+    AOH_GC_THRESHOLD = int(os.getenv('AOH_GC_THRESHOLD', '60'))
+except ValueError:
+    logger.critical('$AOH_GC_THRESHOLD must be a positive integer')
+    sys.exit(1)
+if AOH_GC_THRESHOLD <= 0:
+    logger.critical('$AOH_GC_THRESHOLD must be a positive integer')
+    sys.exit(1)
+
 AOH_LOG_LEVEL = os.getenv('AOH_LOG_LEVEL', 'ERROR')
 
 try:
