@@ -13,3 +13,8 @@ test4.yml:
   path: test_become_password_handling.yml
   env:
     ANSIBLE_PIPELINING: 'true'
+
+test5.yml:
+  path: test_connection_failure.yml
+  env:
+    ANSIBLE_TIMEOUT: '5'

@@ -1,0 +1,5 @@
+- hosts: aoh
+  gather_facts: no
+  tasks:
+    - name: Long running task
+      command: sleep 300
