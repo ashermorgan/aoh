@@ -70,13 +70,13 @@ $DOCKER run --rm --network aoh-test --detach --name aoh-test-client \
     aoh-test-client bash -c \
     "curl http://aoh-test-server:8000/run | python3 - test$i.yml"
 
-for i in {1..10}; do
+for j in {1..10}; do
     if $DOCKER exec aoh-test-server sh -c \
         'find /tmp -maxdepth 1 -type d -name "aoh-*" -print -quit | grep -q .\
         && ps -eo comm | grep -qx ansible-playboo'
     then
         break
-    elif [ "$i" -eq 10 ]; then
+    elif [ "$j" -eq 10 ]; then
         echo Timed out waiting for server to start runner
         $DOCKER exec aoh-test-server sh -c \
             'find /tmp -maxdepth 1 -type d -name "aoh-*" -print -quit; \
@@ -93,7 +93,7 @@ done
 sleep 1
 $DOCKER stop aoh-test-client
 
-for i in {1..10}; do
+for j in {1..10}; do
     if $DOCKER exec aoh-test-server sh -c \
         '! find /tmp -maxdepth 1 -type d -name "aoh-*" -print -quit | grep -q .\
         && ! ps -eo comm | grep -qx ansible-playboo'
@@ -102,7 +102,7 @@ for i in {1..10}; do
         echo test$i.yml passed.
         echo ================================
         break
-    elif [ "$i" -eq 10 ]; then
+    elif [ "$j" -eq 10 ]; then
         echo Timed out waiting for server to clean up runner
         $DOCKER exec aoh-test-server sh -c \
             'find /tmp -maxdepth 1 -type d -name "aoh-*" -print -quit; \

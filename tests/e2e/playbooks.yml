@@ -17,4 +17,4 @@ test4.yml:
 test5.yml:
   path: test_connection_failure.yml
   env:
-    ANSIBLE_TIMEOUT: '5'
+    ANSIBLE_TIMEOUT: '1'
