@@ -191,6 +191,9 @@ class Runner:
 
             # We check runner status first, in case new logs come in afterwards
             res['finished'] = self._runner_finished()
+            if res['finished']:
+                assert self._runner is not None
+                res['rc'] = self._runner.rc
 
             if self.playbook.output:
                 assert self._logs is not None

@@ -84,7 +84,7 @@ def send_message(url, cookies, data, keep_alive=False):
     elif keep_alive and not res.get('keep-alive'):
         raise ClientError('Received invalid keep-alive response')
     elif res.get('finished'):
-        sys.exit(0)
+        sys.exit(res['rc'])
 
     return res
 
