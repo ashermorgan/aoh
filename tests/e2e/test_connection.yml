@@ -1,12 +1,17 @@
 # Adapted from Ansible's test/integration/targets/connection/test_connection.yml
 
 - hosts: aoh
-  gather_facts: no
   serial: 1
   vars:
-    action_prefix: ''
+    action_prefix: >-
+      {{ 'win_' if ansible_facts.os_family == 'Windows' else '' }}
     local_tmp: /tmp/ansible-local
-    remote_tmp: /tmp/ansible-remote
+    remote_tmp: >-
+      {{
+        'C:/windows/temp/ansible-remote'
+        if ansible_facts.os_family == 'Windows'
+        else '/tmp/ansible-remote'
+      }}
 
   tasks:
 

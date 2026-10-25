@@ -301,6 +301,9 @@ def create_runner(playbook, args):
 def cli(args):
     """Execute the AoH client CLI."""
 
+    if sys.platform == 'win32':
+        sys.stdout.reconfigure(encoding='utf-8')
+
     if '-h' in args or '--help' in args:
         if len(args) >= 1 and args[0] != '-':
             prog = args[0]

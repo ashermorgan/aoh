@@ -1,0 +1,21 @@
+# Adapted from Ansible's test/integration/targets/connection_windows_ssh/tests.yml
+
+- hosts: aoh
+  tasks:
+    - name: skip runas test for Unix hosts
+      when: ansible_facts.os_family != 'Windows'
+      block:
+        - debug:
+            msg: Skipping test for Unix host.
+        - meta: end_play
+
+    - name: test become on Windows
+      win_whoami:
+      register: win_become
+      become: yes
+      become_method: runas
+      become_user: SYSTEM
+
+    - name: assert become successful on Windows
+      assert:
+        that: win_become.account.sid == "S-1-5-18"

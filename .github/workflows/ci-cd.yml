@@ -34,7 +34,7 @@ jobs:
         run: python -m unittest tests.unit
 
 
-  run-e2e-tests:
+  run-e2e-tests-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -44,6 +44,47 @@ jobs:
         run: ./tests/e2e/run.sh
 
 
+  run-e2e-tests-windows:
+    runs-on: windows-2025
+
+    env:
+      DOCKER_HOST: tcp://127.0.0.1:2375
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+
+      - name: Replace symlinks with copies
+        run: |
+          Remove-Item -LiteralPath .\aoh\templates\client.py -Force
+          Copy-Item -LiteralPath .\aoh\client.py -Destination .\aoh\templates\client.py
+
+      - name: Install Alpine Linux in WSL
+        run: |
+          wsl --install --no-distribution
+          $url = "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-minirootfs-3.24.2-x86_64.tar.gz"
+          Invoke-WebRequest -Uri $url -OutFile alpine.tar.gz
+          wsl --install --name Alpine --from-file alpine.tar.gz
+
+      - name: Install Docker in WSL
+        run: |
+          wsl -d Alpine -- apk update
+          wsl -d Alpine -- apk add docker
+          wsl -d Alpine -- sh -c 'mkdir -p /etc/docker && echo "{\"hosts\": [\"tcp://127.0.0.1:2375\", \"unix:///var/run/docker.sock\"]}" > /etc/docker/daemon.json'
+
+      - name: Start dockerd in WSL
+        run: |
+          wsl -d Alpine -- sh -c 'nohup sleep infinity > /dev/null 2>&1 &'
+          wsl -d Alpine -- sh -c 'nohup dockerd > /var/log/dockerd.log 2>&1 & sleep 15 && docker info'
+
+      - name: Install Docker and Python
+        run: choco install docker-cli python3 -y
+
+      - name: Run end-to-end tests
+        shell: powershell
+        run: ./tests/e2e/run.ps1
+
+
   build-and-push-image:
     runs-on: ubuntu-latest
 
@@ -51,7 +92,8 @@ jobs:
 
     needs:
       - run-unit-tests
-      - run-e2e-tests
+      - run-e2e-tests-linux
+      - run-e2e-tests-windows
 
     permissions:
       contents: read

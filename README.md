@@ -84,14 +84,12 @@ Options:
   <opts>            Any (server-approved) ansible-playbook(1) options
 ```
 
-<!--
-Windows clients are also supported. Just use the `Invoke-RestMethod` cmdlet
-instead of `curl`.
+Windows clients are also supported. Just use the `Invoke-RestMethod` PowerShell
+cmdlet instead of `curl`.
 
 ```
-PS> irm http://<server IP>:8000 | python
+PS> irm http://<server IP>:8000 | python3
 ```
--->
 
 Finally, stop the AoH server when you're done using it.
 
@@ -288,7 +286,6 @@ AoH:
   variable must not be overridden by, for example, variables in `host_vars/*`
   files. Refer to Ansible's [variable precedence
   documentation][ansible-precedence] for more details.
-- Support for Windows clients is still experimental.
 
 [ansible-precedence]: https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence
 

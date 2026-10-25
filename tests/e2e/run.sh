@@ -23,13 +23,13 @@ if [ $($DOCKER network ls --filter name=aoh-test | wc -l) -eq 1 ]; then
     $DOCKER network create aoh-test
 fi
 
-for i in {1..5}; do
+for i in {1..6}; do
     echo ================================
     echo Running test$i.yml...
     echo ================================
 
-    if [ "$i" -eq 5 ]; then
-        # Test 5 is different: start a long-running playbook, kill the client,
+    if [ "$i" -eq 6 ]; then
+        # Test 6 is different: start a long-running playbook, kill the client,
         # and then check to make sure that server cleans everything up
         $DOCKER run --rm --network aoh-test --detach -h aoh-test-server \
             --name aoh-test-server -v ./:/aoh \

@@ -1,20 +1,25 @@
+# Run Ansible tests for connection plugins, with and without pipelining
 test1.yml:
   path: test_connection.yml
-
 test2.yml:
   path: test_connection.yml
   env:
     ANSIBLE_PIPELINING: 'true'
 
+# Run Ansible tests for local become, with and without pipelining
 test3.yml:
-  path: test_become_password_handling.yml
-
+  path: test_become_unix.yml
 test4.yml:
-  path: test_become_password_handling.yml
+  path: test_become_unix.yml
   env:
     ANSIBLE_PIPELINING: 'true'
 
+# Test basic runas become functionality on Windows
 test5.yml:
+  path: test_become_windows.yml
+
+# A long-running playbook that is used to test connection failures
+test6.yml:
   path: test_connection_failure.yml
   env:
     ANSIBLE_TIMEOUT: '1'

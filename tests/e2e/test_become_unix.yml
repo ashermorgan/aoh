@@ -2,10 +2,10 @@
 
 - hosts: aoh
   tasks:
-  - name: skip this test for non-root users
+  - name: skip this test for Windows hosts / non-root users
     block:
       - debug:
-          msg: Skipping sudo test for non-root user.
+          msg: Skipping sudo test for Windows host / non-root user.
       - meta: end_play
     when: ansible_facts.user_id != 'root'
 
