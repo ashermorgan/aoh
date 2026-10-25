@@ -286,6 +286,9 @@ AoH:
   variable must not be overridden by, for example, variables in `host_vars/*`
   files. Refer to Ansible's [variable precedence
   documentation][ansible-precedence] for more details.
+- With the exception of become/connection/vault password prompts, interactive
+  Ansible features are not supported. This includes the `--step` option, the
+  `var_prompts` playbook section, and the `pause` module's `prompt` option.
 
 [ansible-precedence]: https://docs.ansible.com/projects/ansible/latest/playbook_guide/playbooks_variables.html#understanding-variable-precedence
 
