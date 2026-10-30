@@ -20,8 +20,9 @@ CLI_OPT_WHITELIST = [
 ]
 
 CLI_OPT_BLACKLIST = [
-    '--step', # Interactive
+    '--connection', # Would override AoH connection
     '--inventory-file', '--inventory', '-i', # Would override AoH inventory
+    '--step', # Interactive
 ]
 
 _CLI_PASSWORD_OPTS = {
