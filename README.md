@@ -20,7 +20,7 @@ installation playbook on new machines, anytime, anywhere.
 | Client requirements               | `python`           | `python`    | `ansible-pull`   |
 | Ansible controller                | Server             | Server      | Client           |
 | Client has full repository access | No                 | No          | Yes              |
-| Connection method                 | Usually SSH        | HTTP        | Local connection |
+| Ansible connection method         | Usually SSH        | HTTP        | Local connection |
 
 Note that Ansible controllers don't support Windows, so the `ansible-playbook`,
 `aoh`, and `ansible-pull` programs all must be run on a Unix-based system.
@@ -268,12 +268,16 @@ AoH:
 
 -  Ensure all Ansible playbooks are trusted and do not contain any potential
    security holes
+
 -  Run the AoH server behind a reverse proxy that enforces HTTPS (and set
    the `$AOH_ORIGIN` option accordingly)
+
 -  Restrict access for each playbook to authorized clients using the `password`
    playbook option
+
 -  Encrypt sensitive variables using Ansible Vault and require clients to supply
    the decryption password via Ansible's `--ask-vault-pass` option
+
 -  If clients are untrusted and an Ansible playbook contains tasks for multiple
    hosts, create separate entries in the AoH playbooks file for each host with
    the `host` option set explicitly to prevent hostname spoofing
@@ -286,6 +290,7 @@ AoH:
   variable must not be overridden by, for example, variables in `host_vars/*`
   files. Refer to Ansible's [variable precedence
   documentation][ansible-precedence] for more details.
+
 - With the exception of become/connection/vault password prompts, interactive
   Ansible features are not supported. This includes the `--step` option, the
   `var_prompts` playbook section, and the `pause` module's `prompt` option.
