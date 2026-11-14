@@ -7,7 +7,8 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 COPY aoh aoh
 COPY demo /aoh
-COPY .env.docker .env
+
+ENV AOH_PASSWORDS_FILE=/aoh/passwords.yml AOH_PLAYBOOKS_FILE=/aoh/playbooks.yml
 
 EXPOSE 8000
 
