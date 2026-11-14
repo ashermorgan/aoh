@@ -148,8 +148,9 @@ variables.
 
 ### Playbooks
 
-AoH only executes playbooks that are listed in the file specified by
-the `$AOH_PLAYBOOKS_FILE` option. This file must have the following structure:
+AoH only executes playbooks that are listed in the file specified by the
+`$AOH_PLAYBOOKS_FILE` option. Below is an example playbooks file that documents
+the required structure and available options.
 
 <!-- EXAMPLE COPIED FROM demo/playbooks.yml: -->
 
@@ -172,8 +173,8 @@ main.yml: # The playbook name
     - group2
 
   # A dictionary of environment variables to pass to ansible-playbook. Note that
-  # the ANSIBLE_FORCE_COLOR and ANSIBLE_NOCOLOR variables are not supported
-  # here as they are parsed client-side.
+  # the ANSIBLE_FORCE_COLOR and ANSIBLE_NOCOLOR variables are not supported here
+  # as they are parsed client-side.
   env:
     ANSIBLE_PIPELINING: 'true'
 
@@ -269,8 +270,8 @@ AoH:
 -  Ensure all Ansible playbooks are trusted and do not contain any potential
    security holes
 
--  Run the AoH server behind a reverse proxy that enforces HTTPS (and set
-   the `$AOH_ORIGIN` option accordingly)
+-  Run the AoH server behind a reverse proxy that enforces HTTPS (and set the
+   `$AOH_ORIGIN` option accordingly)
 
 -  Restrict access for each playbook to authorized clients using the `password`
    playbook option
